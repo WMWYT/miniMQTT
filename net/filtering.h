@@ -4,34 +4,31 @@
 #include "../utils/uthash/uthash.h"
 #include "../utils/uthash/utarray.h"
 
-struct h_node{
-    char * data;
-    
-    UT_array * user_id;
-    UT_array * leaf_nodes;
-    UT_array * plus;
-    UT_array * pound;
+struct TrieNode{
+    char * key;
+    struct TrieNode * children;
+    struct TrieNode * plus_children;
+
+    struct{
+        UT_array * client_id;
+    }PoundNode;
+
+    UT_array * client_id;
     UT_hash_handle hh;
 };
 
-struct b_node{
-    char * data;
-
-    UT_array * user_id;
-    UT_array * leaf_nodes;
-    UT_array * plus;
-    UT_array * pound;
+struct RootNode{
+    struct TrieNode * children;
+    struct TrieNode * plus_children;
+    UT_array * client_id;
 };
 
-struct special_plus{
-    UT_array * user_id;
-    UT_array * leaf_nodes;
-};
-
-struct special_pound{
-    UT_array * user_id;
-};
-
-void topic_init(char * topic, char * user_id);
+int intsort(const void *a, const void *b);
+int strsort(const void *_a, const void *_b);
+void intercept(char * key, char * client_id);
+UT_array * search(char * key);
+void delete(char * key, char * client_id);
+void delete_all(struct TrieNode * node);
+void printf_all(struct TrieNode * s_root);
 
 #endif

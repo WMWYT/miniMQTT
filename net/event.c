@@ -58,15 +58,23 @@ int event_handle(int * packet_len, char * buff, int fd){
     }
 
     if(mqtt_packet->publish->publish_header.control_packet_1 == PUBLISH){
+        UT_array * publish_client_id;
         char ** p = NULL;
 
-        HASH_FIND_STR(session_topic, mqtt_packet->publish->variable_header.topic_name->string, st);
-        if(st != NULL){
-            for(p = (char **)utarray_front(st->client_id); p != NULL; p = (char **)utarray_next(st->client_id, p)){
-                HASH_FIND(hh2, session_client_id, *p, strlen(*p), s);
-                write(s->sock, buff, mqtt_packet->publish->publish_header.remaining_length + 2);
-            }
+        publish_client_id = session_topic_search(mqtt_packet->publish->variable_header.topic_name->string);
+
+        while((p = (char **) utarray_next(publish_client_id, p))){
+            HASH_FIND(hh2, session_client_id, *p, strlen(*p), s);
+            write(s->sock, buff, mqtt_packet->publish->publish_header.remaining_length + 2);
         }
+        
+        // HASH_FIND_STR(session_topic, mqtt_packet->publish->variable_header.topic_name->string, st);
+        // if(st != NULL){
+        //     for(p = (char **)utarray_front(st->client_id); p != NULL; p = (char **)utarray_next(st->client_id, p)){
+        //         HASH_FIND(hh2, session_client_id, *p, strlen(*p), s);
+        //         write(s->sock, buff, mqtt_packet->publish->publish_header.remaining_length + 2);
+        //     }
+        // }
     }
 
     if(mqtt_packet->subscribe->subscribe_header.control_packet_1 == SUBSCRIBE){

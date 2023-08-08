@@ -4,10 +4,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "session.h"
+#include "filtering.h"
 
+extern struct RootNode root;
 struct session *session_sock;
 struct session *session_client_id;
-struct session_topic * session_topic;
+//struct session_topic * session_topic;
 
 char * get_rand_str(int num){
     int randomData = 0;
@@ -38,19 +40,6 @@ char * get_rand_str(int num){
     }
 
     return s;
-}
-
-int intsort(const void *a, const void *b) {
-    int _a = *(const int *)a;
-    int _b = *(const int *)b;
-    return (_a < _b) ? -1 : (_a > _b);
-}
-
-static int strsort(const void *_a, const void *_b)
-{
-    const char *a = *(const char* const *)_a;
-    const char *b = *(const char* const *)_b;
-    return strcmp(a,b);
 }
 
 void session_delete(struct session * s){
@@ -177,68 +166,112 @@ void session_delete_all(){
     }
 }
 
+/*******************************topic************************************/
+
 void session_topic_subscribe(char * s_topic, char * s_client_id){
-    struct session_topic * st;
+    // struct session_topic * st;
 
-    HASH_FIND_STR(session_topic, s_topic, st);
+    // HASH_FIND_STR(session_topic, s_topic, st);
 
-    if(st == NULL){
-        st = (struct session_topic *) malloc(sizeof *st);
-        strcpy(st->topic, s_topic);
+    // if(st == NULL){
+    //     st = (struct session_topic *) malloc(sizeof *st);
+    //     strcpy(st->topic, s_topic);
 
-        utarray_new(st->client_id, &ut_str_icd);
+    //     utarray_new(st->client_id, &ut_str_icd);
 
-        HASH_ADD_STR(session_topic, topic, st);
-    }
+    //     HASH_ADD_STR(session_topic, topic, st);
+    // }
 
-    if(utarray_find(st->client_id, &s_client_id, strsort) == NULL){
-        utarray_push_back(st->client_id, &s_client_id);
-    }
+    // if(utarray_find(st->client_id, &s_client_id, strsort) == NULL){
+    //     utarray_push_back(st->client_id, &s_client_id);
+    // }
 
-    utarray_sort(st->client_id, strsort);
+    // utarray_sort(st->client_id, strsort);
+
+    intercept(s_topic, s_client_id);
 }
 
 void session_topic_unsubscribe(char * topic, char * client_id){
-    struct session_topic * st;
-    char **first, **find;
-    long int pos = 0;
+    // struct session_topic * st;
+    // char **first, **find;
+    // long int pos = 0;
 
-    HASH_FIND_STR(session_topic, topic, st);
+    // HASH_FIND_STR(session_topic, topic, st);
 
-    if(st){
-        if((find = utarray_find(st->client_id, &client_id, strsort)) != NULL){
-            first = utarray_front(st->client_id);
-            pos = find - first;
-            utarray_erase(st->client_id, pos, 1);
+    // if(st){
+    //     if((find = utarray_find(st->client_id, &client_id, strsort)) != NULL){
+    //         first = utarray_front(st->client_id);
+    //         pos = find - first;
+    //         utarray_erase(st->client_id, pos, 1);
 
-            if(utarray_front(st->client_id) == NULL){
-                HASH_DEL(session_topic, st);
-                free(st);
-            }
-        }
-    }
-}
+    //         if(utarray_front(st->client_id) == NULL){
+    //             HASH_DEL(session_topic, st);
+    //             free(st);
+    //         }
+    //     }
+    // }
 
-void session_topic_printf_all(){
-    struct session_topic *current, *tmp;
-    int i;
-    char **p = NULL;
-    HASH_ITER(hh, session_topic, current, tmp){
-        printf("topic %s : ", current->topic);
-        while ( (p=(char**)utarray_next(current->client_id, p))) {
-            printf("%s ",*p);
-        }
-        printf("\n");
-    }
+    delete(topic, client_id);
 }
 
 void session_topic_delete_all(){
-    struct session_topic * el, * tmp;
+    // struct session_topic * el, * tmp;
 
-    HASH_ITER(hh, session_topic, el, tmp){
-        utarray_free(el->client_id);
-        HASH_DELETE(hh, session_topic, el);
+    // HASH_ITER(hh, session_topic, el, tmp){
+    //     utarray_free(el->client_id);
+    //     HASH_DELETE(hh, session_topic, el);
+    // }
+
+    // free(el);
+    if(root.client_id != NULL){
+        utarray_clear(root.client_id);
     }
 
-    free(el);
+    if(root.plus_children != NULL){
+        delete_all(root.plus_children);
+    }
+
+    if(root.children != NULL){
+        delete_all(root.children);
+    }
+}
+
+UT_array * session_topic_search(char * topic){
+    return search(topic);
+}
+
+void session_topic_printf_all(){
+    // struct session_topic *current, *tmp;
+    // int i;
+    // char **p = NULL;
+    // HASH_ITER(hh, session_topic, current, tmp){
+    //     printf("topic %s : ", current->topic);
+    //     while ( (p=(char**)utarray_next(current->client_id, p))) {
+    //         printf("%s ",*p);
+    //     }
+    //     printf("\n");
+    // }
+    char **p = NULL;
+    printf("#\n");
+
+    if(root.client_id != NULL){
+        while ( (p=(char**)utarray_next(root.client_id,p))) {
+            printf("%s ",*p);
+        }
+    }
+
+    printf("\n+\n");
+
+    free(p);
+    p = NULL;
+
+    if(root.plus_children != NULL){
+        printf_all(root.plus_children);
+    }
+
+    printf("\nnormal\n");
+
+    printf_all(root.children);
+
+    printf("____________________________________\n");
 }
