@@ -289,7 +289,6 @@ void delete_node(struct TrieNode * node, char * key, char * client_id){
         printf("key:%s\n", key);
     else{
         delete_client_id(node->client_id, client_id);
-        return;
     }
 
     if(key[0] == '/'){
@@ -331,49 +330,49 @@ void delete_node(struct TrieNode * node, char * key, char * client_id){
         delete_node(out_node, tmp_str, client_id);
     }
 
-    if(out_node != NULL){
+    if(node != NULL){
+        printf("fdsfslh\n");
         int flag = 0;
-        if(out_node->children != NULL){
+        if(node->children != NULL){
             flag = 1;
         }
 
-        if(out_node->plus_children != NULL){
+        if(node->plus_children != NULL){
             flag = 1;
         }
 
-        if(out_node->client_id != NULL){
-            if(utarray_front(out_node->client_id) != NULL)
+        if(node->client_id != NULL){
+            if(utarray_front(node->client_id) != NULL)
                 flag = 1;
         }
 
-        if(out_node->PoundNode.client_id != NULL){
-            if(utarray_front(out_node->PoundNode.client_id) != NULL)
+        if(node->PoundNode.client_id != NULL){
+            if(utarray_front(node->PoundNode.client_id) != NULL)
                 flag = 1;
         }
 
         if(flag == 0){
-            printf("return out : %s\n", out_node->key);
+            printf("return out : %s\n", node->key);
             printf("return : %s\n", node->key);
 
-            if(!strcmp(out_node->key, "+")){
-                HASH_DEL(node->plus_children, out_node);
+            if(!strcmp(node->key, "+")){
+                HASH_DEL(node->plus_children, node);
             }else{
-                HASH_DEL(node->children, out_node);
+                HASH_DEL(node->children, node);
             }
+            free(node);
             free(out_node);
         }
     }
 }
 
-void delete(char * key, char * client_id){
-    struct TrieNode * node;
+void delete_topic(char * key, char * client_id){
+    struct TrieNode * node = NULL;
 
-    char * tmp_str;
-    char * dest_str;
+    char * tmp_str = NULL;
     char **first, **find;
     int key_len = strlen(key);
     int i = 0;
-    int tmp_int = 0;
     long int pos = 0;
 
     if(key[0] == '#'){
@@ -405,11 +404,9 @@ void delete(char * key, char * client_id){
     }
    
     if(node != NULL){
-        if(key[i] != '\0'){
-            tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
-            memmove(tmp_str, &key[i], key_len - i);
-            delete_node(node, tmp_str, client_id);
-        }
+        tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
+        memmove(tmp_str, &key[i], key_len - i);
+        delete_node(node, tmp_str, client_id);
     }
 }
 

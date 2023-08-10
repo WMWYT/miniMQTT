@@ -19,7 +19,6 @@ struct session {
 };
 
 int session_init(int s_sock, char * s_client_id);
-void session_publish(int s_sock, struct publish_packet * packet);
 void session_subscribe_topic(char * s_topic, struct session *s);
 void session_unsubscribe_topic(char * s_topic, struct session * s);
 void session_printf_all();

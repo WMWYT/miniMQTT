@@ -25,9 +25,11 @@ struct RootNode{
 
 int intsort(const void *a, const void *b);
 int strsort(const void *_a, const void *_b);
+
+//TODO 添加以$为开头的主题
 void intercept(char * key, char * client_id);
 UT_array * search(char * key);
-void delete(char * key, char * client_id);
+void delete_topic(char * key, char * client_id);
 void delete_all(struct TrieNode * node);
 void printf_all(struct TrieNode * s_root);
 

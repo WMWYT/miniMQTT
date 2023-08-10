@@ -14,7 +14,6 @@
 union mqtt_packet * mqtt_packet;
 extern struct session * session_sock;
 extern struct session * session_client_id;
-extern struct session_topic * session_topic;
 
 void session_close(struct session *s){
     char **p = NULL;
@@ -77,7 +76,6 @@ int event_handle(int * packet_len, char * buff, int fd){
         if(mqtt_packet->publish->qos == 2){
             //TODO 这里其实并未存储报文标识符
             write(fd, mqtt_publish_qos_encode(PUBREC, 0, mqtt_packet->publish->variable_header.identifier_MSB, mqtt_packet->publish->variable_header.identifier_LSB), 4);
-            //session_publish(fd, mqtt_packet->publish);
         }
     }
 

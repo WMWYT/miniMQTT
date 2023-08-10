@@ -112,13 +112,6 @@ int session_init(int s_sock, char * s_client_id){
 
     return 0;
 }
-void session_publish(int s_sock, struct publish_packet * packet){
-    struct session * sock_out;
-
-    HASH_FIND(hh1, session_sock, &s_sock, sizeof(int), sock_out);
-
-    sock_out->publish = packet;
-}
 
 void session_subscribe_topic(char * s_topic, struct session *s){
     if(utarray_find(s->topic, &s_topic, strsort) == NULL){
@@ -179,7 +172,7 @@ void session_topic_subscribe(char * s_topic, char * s_client_id){
 }
 
 void session_topic_unsubscribe(char * topic, char * client_id){
-    delete(topic, client_id);
+    delete_topic(topic, client_id);
 }
 
 void session_topic_delete_all(){
