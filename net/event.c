@@ -29,7 +29,7 @@ int event_handle(int * packet_len, char * buff, int fd){
     struct session_topic * st;
 
     int session_flag;
-    //TODO 这里所有的操作全是QOS0的,且都可以匿名登陆
+    //TODO 增加登陆功能
     
     HASH_FIND(hh1, session_sock, &fd, sizeof(int), s);
     mqtt_packet = mqtt_pack_decode(buff, packet_len);
@@ -63,18 +63,27 @@ int event_handle(int * packet_len, char * buff, int fd){
 
         publish_client_id = session_topic_search(mqtt_packet->publish->variable_header.topic_name->string);
 
-        while((p = (char **) utarray_next(publish_client_id, p))){
-            HASH_FIND(hh2, session_client_id, *p, strlen(*p), s);
-            write(s->sock, buff, mqtt_packet->publish->publish_header.remaining_length + 2);
+        if(publish_client_id != NULL){
+            while((p = (char **) utarray_next(publish_client_id, p))){
+                HASH_FIND(hh2, session_client_id, *p, strlen(*p), s);
+                write(s->sock, buff, mqtt_packet->publish->publish_header.remaining_length + 2);
+            }
+        }
+
+        if(mqtt_packet->publish->qos == 1){
+            write(fd, mqtt_publish_qos_encode(PUBACK, 0, mqtt_packet->publish->variable_header.identifier_MSB, mqtt_packet->publish->variable_header.identifier_LSB), 4);
         }
         
-        // HASH_FIND_STR(session_topic, mqtt_packet->publish->variable_header.topic_name->string, st);
-        // if(st != NULL){
-        //     for(p = (char **)utarray_front(st->client_id); p != NULL; p = (char **)utarray_next(st->client_id, p)){
-        //         HASH_FIND(hh2, session_client_id, *p, strlen(*p), s);
-        //         write(s->sock, buff, mqtt_packet->publish->publish_header.remaining_length + 2);
-        //     }
-        // }
+        if(mqtt_packet->publish->qos == 2){
+            //TODO 这里其实并未存储报文标识符
+            write(fd, mqtt_publish_qos_encode(PUBREC, 0, mqtt_packet->publish->variable_header.identifier_MSB, mqtt_packet->publish->variable_header.identifier_LSB), 4);
+            //session_publish(fd, mqtt_packet->publish);
+        }
+    }
+
+    if(mqtt_packet->pubrel->const_header.control_packet_1 == PUBREL){
+        //TODO 找到存储的publish消息并删除
+        write(fd, mqtt_publish_qos_encode(PUBCOMP, 0, mqtt_packet->pubrel->variable_header.byte1, mqtt_packet->pubrel->variable_header.byte2), 4);
     }
 
     if(mqtt_packet->subscribe->subscribe_header.control_packet_1 == SUBSCRIBE){

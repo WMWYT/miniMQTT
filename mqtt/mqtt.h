@@ -93,9 +93,9 @@ struct subscribe_packet{
     int topic_size;
 };
 
-struct mqtt_const_packet
-{
-    fixed_header connack_header;
+struct mqtt_const_packet{
+    fixed_header const_header;
+
     struct
     {
         unsigned char byte1;
@@ -103,10 +103,10 @@ struct mqtt_const_packet
     }variable_header;
 };
 
-typedef struct mqtt_const_packet connack_packet;
 
 struct suback_packet{
     fixed_header suback_header;
+
     struct {
         unsigned char identifier_MSB;
         unsigned char identifier_LSB;
@@ -118,6 +118,11 @@ struct suback_packet{
 
 struct publish_packet{
     fixed_header publish_header;
+
+    int dup;
+    int qos;
+    int retain;
+
     struct {
         mqtt_string * topic_name;
         unsigned char identifier_MSB;
@@ -148,10 +153,16 @@ struct disconnect_packet{
     fixed_header disconnect_header;
 };
 
-union mqtt_packet
-{
+typedef struct mqtt_const_packet connack_packet;
+typedef struct mqtt_const_packet puback_packet;
+typedef struct mqtt_const_packet pubrec_packet;
+typedef struct mqtt_const_packet pubrel_packet;
+typedef struct mqtt_const_packet pubcomp_packet;
+
+union mqtt_packet{
     struct connect_packet * connect;
     struct publish_packet * publish;
+    pubrel_packet * pubrel;
     struct subscribe_packet * subscribe;
     struct unsubscribe_packet * unsubscribe;
     struct pingreq_packet * pingreq;

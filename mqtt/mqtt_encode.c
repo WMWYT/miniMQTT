@@ -46,7 +46,18 @@ mqtt_string * string_encode(char * buff){
     string->string = buff;
 
     return string;
+}
 
+char * const_packet_to_hex(struct mqtt_const_packet packet){
+    char * buff = (char *) malloc(5);
+    memset(buff, 0, 4);
+
+    buff[0] = packet.const_header.control_packet_1 * 0x10 + packet.const_header.control_packet_2;
+    buff[1] = packet.const_header.remaining_length;
+    buff[2] = packet.variable_header.byte1;
+    buff[3] = packet.variable_header.byte2;
+
+    return buff;
 }
 
 char * conncet_packet_to_hex(struct connect_packet packet){
@@ -164,28 +175,16 @@ char * mqtt_conncet_encode(unsigned char c_flag, int keep_alive
     return conncet_packet_to_hex(packet);
 }
 
-char * connack_packet_to_hex(struct mqtt_const_packet packet){
-    char * buff = (char *) malloc(4);
-    memset(buff, 0, 4);
-
-    buff[0] = packet.connack_header.control_packet_1 * 0x10 + packet.connack_header.control_packet_2;
-    buff[1] = packet.connack_header.remaining_length;
-    buff[2] = packet.variable_header.byte1;
-    buff[3] = packet.variable_header.byte2;
-
-    return buff;
-}
-
 char * mqtt_connack_encode(int acknowledge_flag, int return_code){
     connack_packet connack_packet;
 
-    connack_packet.connack_header.control_packet_1 = 2;
-    connack_packet.connack_header.control_packet_2 = 0;
-    connack_packet.connack_header.remaining_length = 2;
+    connack_packet.const_header.control_packet_1 = 2;
+    connack_packet.const_header.control_packet_2 = 0;
+    connack_packet.const_header.remaining_length = 2;
     connack_packet.variable_header.byte1 = acknowledge_flag;
     connack_packet.variable_header.byte2 = return_code;
 
-    return connack_packet_to_hex(connack_packet);
+    return const_packet_to_hex(connack_packet);
 }
 
 char * publish_packet_to_hex(struct publish_packet packet){
@@ -224,6 +223,18 @@ int mqtt_publish_encode(unsigned char * topic, unsigned char * payload, unsigned
     memcpy(buff, publish_packet_to_hex(packet), packet.publish_header.remaining_length + 2);
 
     return packet.publish_header.remaining_length + 2;
+}
+
+char * mqtt_publish_qos_encode(int control_type, int flag, int identifier_MSB, int identifier_LSB){
+    puback_packet puback_packet;
+
+    puback_packet.const_header.control_packet_1 = control_type;
+    puback_packet.const_header.control_packet_2 = flag;
+    puback_packet.const_header.remaining_length = 2;
+    puback_packet.variable_header.byte1 = identifier_MSB;
+    puback_packet.variable_header.byte2 = identifier_LSB;
+
+    return const_packet_to_hex(puback_packet);
 }
 
 char * subscribe_packet_to_hex(struct subscribe_packet packet){

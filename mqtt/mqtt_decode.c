@@ -180,12 +180,18 @@ struct publish_packet * mqtt_publish_packet_create(struct fixed_header header, u
     memset(packet, 0, sizeof(struct publish_packet));
 
     packet->publish_header = header;
+    packet->retain = packet->publish_header.control_packet_2 & 1;
+    packet->qos = 2 * (packet->publish_header.control_packet_2 >> 2 & 1) + (packet->publish_header.control_packet_2 >> 1 & 1);
+    packet->dup = packet->publish_header.control_packet_2 >> 3 & 1;
+
     packet->variable_header.topic_name = hex_to_string(buff);
     buff += packet->variable_header.topic_name->string_len + 2;
 
-    //TODO 因为是qos0所以没有报文标识
-    //packet->variable_header.identifier_MSB = *buff++;
-    //packet->variable_header.identifier_LSB = *buff++;
+    if(packet->qos > 0){
+        packet->variable_header.identifier_MSB = *buff++;
+        packet->variable_header.identifier_LSB = *buff++;
+        printf("publish identifier:%d %d\n", packet->variable_header.identifier_MSB, packet->variable_header.identifier_LSB);
+    }
 
     int str_len = packet->publish_header.remaining_length - packet->variable_header.topic_name->string_len - 2;
 
@@ -193,7 +199,17 @@ struct publish_packet * mqtt_publish_packet_create(struct fixed_header header, u
     memset(packet->payload, 0, str_len);
     memcpy(packet->payload, buff, str_len);
 
-    //printf("publish payload: %s\n", packet->payload);
+    return packet;
+}
+
+pubrel_packet * mqtt_pubrel_packet_create(struct fixed_header header, unsigned char * buff){
+    pubrel_packet * packet = (pubrel_packet *) malloc(sizeof(pubrel_packet));
+    memset(packet, 0, sizeof * packet);
+
+    packet->const_header = header;
+
+    packet->variable_header.byte1 = *buff++;
+    packet->variable_header.byte2 = *buff;
 
     return packet;
 }
@@ -288,6 +304,9 @@ union mqtt_packet * mqtt_pack_decode(unsigned char * buff, int * packet_len)
         break;
     case PUBLISH:
         mqtt_packet->publish = mqtt_publish_packet_create(header, ++buff);
+        break;
+    case PUBREL:
+        mqtt_packet->pubrel = mqtt_pubrel_packet_create(header, ++buff);
         break;
     case SUBSCRIBE:
         if((mqtt_packet->subscribe = mqtt_subscribe_packet_create(header, ++buff)) == NULL){
