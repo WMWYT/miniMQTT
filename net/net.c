@@ -26,15 +26,19 @@ void client_close(int fd){
     epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
     close(fd);
     printf("close socke %d\n", fd);
-    session_printf_all();
-    session_topic_printf_all();
+    // session_printf_all();
+    // session_topic_printf_all();
     printf("-----------------------------------\n");
 }
 
 void close_socker(){
     session_delete_all();
     session_topic_delete_all();
-    free(mqtt_packet);
+
+    if(mqtt_packet){
+        free(mqtt_packet);
+    }
+    
     close(server_sock);
     close(epfd);
 }
@@ -106,6 +110,7 @@ void net_start(){
             }else{
                 //TODO 响应在合理时间内未受到connect包应该断开链接，身份验证
                 str_len = read(epoll_events[i].data.fd, buff, BUFF_SIZE);
+                printf("sock: %d ", epoll_events[i].data.fd);
                 printf_buff("read", buff, str_len);
                 int packet_len = 0;
                 if(str_len > 0){
@@ -123,6 +128,8 @@ void net_start(){
 
                         str_len -= packet_len;
                     }
+                }else{
+                    client_close(epoll_events[i].data.fd);
                 }
             }
         }

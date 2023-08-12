@@ -28,7 +28,7 @@ int event_handle(int * packet_len, char * buff, int fd){
     struct session_topic * st;
 
     int session_flag;
-    //TODO 增加登陆功能
+    //TODO 增加登陆功能,这里的qos>0只是能实现消息分发，没有qos>0的特性
     
     HASH_FIND(hh1, session_sock, &fd, sizeof(int), s);
     mqtt_packet = mqtt_pack_decode(buff, packet_len);
@@ -78,10 +78,15 @@ int event_handle(int * packet_len, char * buff, int fd){
             write(fd, mqtt_publish_qos_encode(PUBREC, 0, mqtt_packet->publish->variable_header.identifier_MSB, mqtt_packet->publish->variable_header.identifier_LSB), 4);
         }
     }
+    
+    if(mqtt_packet->const_packet->const_header.control_packet_1 == PUBREC){
+        printf("dfsdfsdds\n");
+        write(fd, mqtt_publish_qos_encode(PUBREL, 2, mqtt_packet->const_packet->variable_header.byte1, mqtt_packet->const_packet->variable_header.byte2), 4);
+    }
 
-    if(mqtt_packet->pubrel->const_header.control_packet_1 == PUBREL){
+    if(mqtt_packet->const_packet->const_header.control_packet_1 == PUBREL || mqtt_packet->const_packet->const_header.control_packet_1 == PUBREC){
         //TODO 找到存储的publish消息并删除
-        write(fd, mqtt_publish_qos_encode(PUBCOMP, 0, mqtt_packet->pubrel->variable_header.byte1, mqtt_packet->pubrel->variable_header.byte2), 4);
+        write(fd, mqtt_publish_qos_encode(PUBCOMP, 0, mqtt_packet->const_packet->variable_header.byte1, mqtt_packet->const_packet->variable_header.byte2), 4);
     }
 
     if(mqtt_packet->subscribe->subscribe_header.control_packet_1 == SUBSCRIBE){
@@ -108,6 +113,8 @@ int event_handle(int * packet_len, char * buff, int fd){
         session_close(s);
         return -1;// 小于0 客户端断开链接， 要断开链接不发送
     }
+
+    free(mqtt_packet);
 
     return 0; // 等于0 没问题
 }

@@ -162,7 +162,7 @@ typedef struct mqtt_const_packet pubcomp_packet;
 union mqtt_packet{
     struct connect_packet * connect;
     struct publish_packet * publish;
-    pubrel_packet * pubrel;
+    struct mqtt_const_packet * const_packet;
     struct subscribe_packet * subscribe;
     struct unsubscribe_packet * unsubscribe;
     struct pingreq_packet * pingreq;

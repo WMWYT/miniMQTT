@@ -190,7 +190,6 @@ struct publish_packet * mqtt_publish_packet_create(struct fixed_header header, u
     if(packet->qos > 0){
         packet->variable_header.identifier_MSB = *buff++;
         packet->variable_header.identifier_LSB = *buff++;
-        printf("publish identifier:%d %d\n", packet->variable_header.identifier_MSB, packet->variable_header.identifier_LSB);
     }
 
     int str_len = packet->publish_header.remaining_length - packet->variable_header.topic_name->string_len - 2;
@@ -202,7 +201,7 @@ struct publish_packet * mqtt_publish_packet_create(struct fixed_header header, u
     return packet;
 }
 
-pubrel_packet * mqtt_pubrel_packet_create(struct fixed_header header, unsigned char * buff){
+pubrel_packet * mqtt_const_packet_create(struct fixed_header header, unsigned char * buff){
     pubrel_packet * packet = (pubrel_packet *) malloc(sizeof(pubrel_packet));
     memset(packet, 0, sizeof * packet);
 
@@ -305,8 +304,11 @@ union mqtt_packet * mqtt_pack_decode(unsigned char * buff, int * packet_len)
     case PUBLISH:
         mqtt_packet->publish = mqtt_publish_packet_create(header, ++buff);
         break;
+    case PUBACK:
+    case PUBREC:
     case PUBREL:
-        mqtt_packet->pubrel = mqtt_pubrel_packet_create(header, ++buff);
+    case PUBCOMP:
+        mqtt_packet->const_packet = mqtt_const_packet_create(header, ++buff);
         break;
     case SUBSCRIBE:
         if((mqtt_packet->subscribe = mqtt_subscribe_packet_create(header, ++buff)) == NULL){
