@@ -39,15 +39,27 @@ int event_handle(int * packet_len, char * buff, int fd){
     }
     
     if(mqtt_packet->connect->connect_header.control_packet_1 == CONNECT){
-        if((session_flag = session_init(fd, mqtt_packet->connect->payload.client_id->string)) >= 0){
-            send(fd, mqtt_connack_encode(CONNACK, mqtt_packet->connect->error_code), 4, 0);
-            if(session_flag > 0){
-                return session_flag; //大于0 断开之前会话client_id相同的sock
-            }
+        int error_code = mqtt_packet->connect->error_code;
 
-            return 0;
+        if(config->is_anonymously && error_code == CONNECT_ACCEPTED){
+            printf("fksdjhfksjd\n");
+        }
+
+        send(fd, mqtt_connack_encode(CONNACK, error_code), 4, 0);
+
+        if(error_code == CONNECT_ACCEPTED){
+            if((session_flag = session_init(fd, mqtt_packet->connect->payload.client_id->string)) >= 0){
+                if(session_flag > 0){
+                    return session_flag; //大于0 断开之前会话client_id相同的sock
+                }
+
+                return 0;
+            }else{
+                printf("Repeat connect\n");
+                if(s) session_close(s);
+                return -1;
+            }
         }else{
-            printf("Repeat connect\n");
             return -1;
         }
     }

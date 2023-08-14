@@ -21,6 +21,7 @@ struct epoll_event event;
 extern union mqtt_packet * mqtt_packet;
 extern struct session * session_sock;
 extern struct session * session_client_id;
+extern struct config * config;
 
 void client_close(int fd){
     epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
@@ -68,6 +69,8 @@ void net_start(){
     int event_cnt;
 
     int port = config->port;
+
+    control_init();
 
     server_sock = socket(PF_INET, SOCK_STREAM, 0);
     

@@ -52,8 +52,7 @@ struct mqtt_string * hex_to_string(unsigned char * buff){
     return string;
 }
 
-struct connect_packet *mqtt_connect_packet_create(struct fixed_header header, unsigned char * buff)
-{
+struct connect_packet *mqtt_connect_packet_create(struct fixed_header header, unsigned char * buff){
     if(header.control_packet_1 != 1 || header.control_packet_2 != 0){
         return NULL;
     }
