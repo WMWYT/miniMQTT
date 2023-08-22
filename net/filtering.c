@@ -405,6 +405,7 @@ void delete_topic(char * key, char * client_id){
    
     if(node != NULL){
         tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
+        memset(tmp_str, 0, sizeof(char) * (key_len + 1));
         memmove(tmp_str, &key[i], key_len - i);
         delete_node(node, tmp_str, client_id);
     }

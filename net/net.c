@@ -27,8 +27,8 @@ void client_close(int fd){
     epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
     close(fd);
     printf("close socke %d\n", fd);
-    // session_printf_all();
-    // session_topic_printf_all();
+    session_printf_all();
+    session_topic_printf_all();
     printf("-----------------------------------\n");
 }
 
@@ -69,8 +69,6 @@ void net_start(){
     int event_cnt;
 
     int port = config->port;
-
-    control_init();
 
     server_sock = socket(PF_INET, SOCK_STREAM, 0);
     

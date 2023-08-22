@@ -10,9 +10,7 @@
 struct config{
     int port;
     int is_anonymously;
-    const char * user_control;
-    const char * file_dir;
-    const char * file_name;
+    const char * control_type;
 };
 
 void config_init();

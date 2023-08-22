@@ -7,6 +7,7 @@ add_subdirectory(net)
 add_subdirectory(config)
 add_subdirectory(utils)
 add_subdirectory(log)
+add_subdirectory(control)
 
 add_executable(miniMQTT miniMQTT.c)
 add_executable(test test/test.c test/test_event.c)

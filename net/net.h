@@ -3,6 +3,5 @@
 #include "event.h"
 
 void net_start();
-void control_init();
 
 #endif

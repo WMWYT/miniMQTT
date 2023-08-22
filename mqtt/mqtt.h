@@ -1,7 +1,7 @@
 #ifndef MQTT_H
 #define MQTT_H
 
-enum control{
+enum control_packet{
     CONNECT = 0x01,
     CONNACK,
     PUBLISH,

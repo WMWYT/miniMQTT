@@ -17,6 +17,8 @@ char * get_rand_str(int num){
     char * s = (char *) malloc(sizeof(char) * num + 1);
     int i,lstr;
     char ss[2] = {0};
+
+    memset(s, 0, sizeof(char) * num + 1);
     lstr = strlen(str);
 
     if (file == -1) {
