@@ -5,8 +5,8 @@
 #include "control.h"
 
 void * control_lib;
-int (*broker_control_strat)(void);
-static int (*connect_call_back)();
+int (*broker_control_strat)();
+static int (*connect_call_back)(void *);
 
 int control_init(const char * dl_dir, char * type){
     void (*broker_control_info)(char *);
@@ -54,7 +54,7 @@ int control_init(const char * dl_dir, char * type){
     return broker_control_strat();
 }
 
-int control_register(int (*call_back)(), int packet_type){//TODO 将connect包传入回调函数
+int control_register(int (*call_back)(void *), int packet_type){//TODO 将connect包传入回调函数
     switch (packet_type)
     {
     case CONNECT:
@@ -68,7 +68,7 @@ int control_register(int (*call_back)(), int packet_type){//TODO 将connect包�
 }
 
 int control_connect(struct connect_packet * connect){
-    return connect_call_back();
+    return connect_call_back(connect);
 }
 
 int control_destroyed(){

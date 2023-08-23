@@ -5,7 +5,7 @@
 #include "../../net/control.h"
 
 void broker_control_info(char * control_type){
-    char * type = "file";
+    char * type = "test";
     strcpy(control_type, type);
 }
 
