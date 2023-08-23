@@ -12,7 +12,6 @@ struct session {
     
     //info
     UT_array * topic;
-    struct publish_packet * publish;
 
     UT_hash_handle hh1;
     UT_hash_handle hh2;

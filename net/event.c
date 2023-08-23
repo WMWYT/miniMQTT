@@ -43,7 +43,7 @@ int event_handle(int * packet_len, char * buff, int fd){
         int error_code = mqtt_packet->connect->error_code;
 
         if(config->is_anonymously && error_code == CONNECT_ACCEPTED){
-            error_code = control_start();
+            error_code = control_connect(mqtt_packet->connect);
         }
 
         send(fd, mqtt_connack_encode(CONNACK, error_code), 4, 0);

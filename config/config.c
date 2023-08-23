@@ -15,9 +15,15 @@ void config_init(){
     conf.is_anonymously = iniparser_getboolean(ini, "login:anonymously", DEFAULT_IS_ANONYMOUSLY);
 
     if(conf.is_anonymously){
-        conf.control_type = iniparser_getstring(ini, "login:control_type", NULL);
+        strcpy(conf.control_type, iniparser_getstring(ini, "login:control_type", NULL));
         if(conf.control_type == NULL){
             printf("config error you not have set [control_type].\n");
+            exit(0);
+        }
+
+        strcpy(conf.dir, iniparser_getstring(ini, "control:dir", NULL));
+        if(conf.dir == NULL){
+            printf("config error you not have set [dir].\n");
             exit(0);
         }
     }

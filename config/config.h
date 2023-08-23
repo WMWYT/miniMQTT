@@ -10,7 +10,8 @@
 struct config{
     int port;
     int is_anonymously;
-    const char * control_type;
+    char control_type[64];
+    char dir[256];
 };
 
 void config_init();

@@ -9,6 +9,7 @@
 #include <sys/epoll.h>
 #include "net.h"
 #include "session.h"
+#include "control.h"
 #include "../config/config.h"
 #include "../log/log.h"
 
@@ -33,6 +34,7 @@ void client_close(int fd){
 }
 
 void close_socker(){
+    control_destroyed();
     session_delete_all();
     session_topic_delete_all();
 
@@ -76,6 +78,12 @@ void net_start(){
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(port);
+
+    printf("init:%s\n", config->dir);
+
+    if(control_init(config->dir, config->control_type) == -1){
+        error_exit("control error");
+    }
     
     if(bind(server_sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1){
         error_exit("bind error");
