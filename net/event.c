@@ -58,12 +58,10 @@ int event_handle(int * packet_len, char * buff, int fd){
             }else{
                 printf("Repeat connect\n");
                 if(s) session_close(s);
-                
-                return -1;
             }
-        }else{
-            return -1;
         }
+
+        return -1;
     }
 
     if(s == NULL){
@@ -94,7 +92,6 @@ int event_handle(int * packet_len, char * buff, int fd){
     }
     
     if(mqtt_packet->const_packet->const_header.control_packet_1 == PUBREC){
-        printf("dfsdfsdds\n");
         write(fd, mqtt_publish_qos_encode(PUBREL, 2, mqtt_packet->const_packet->variable_header.byte1, mqtt_packet->const_packet->variable_header.byte2), 4);
     }
 

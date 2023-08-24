@@ -28,8 +28,8 @@ void client_close(int fd){
     epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
     close(fd);
     printf("close socke %d\n", fd);
-    session_printf_all();
-    session_topic_printf_all();
+    // session_printf_all();
+    // session_topic_printf_all();
     printf("-----------------------------------\n");
 }
 
@@ -37,11 +37,7 @@ void close_socker(){
     control_destroyed();
     session_delete_all();
     session_topic_delete_all();
-
-    if(mqtt_packet){
-        free(mqtt_packet);
-    }
-    
+    if(mqtt_packet) free(mqtt_packet);
     close(server_sock);
     close(epfd);
 }
@@ -81,9 +77,10 @@ void net_start(){
 
     printf("init:%s\n", config->dir);
 
-    if(control_init(config->dir, config->control_type) == -1){
-        error_exit("control error");
-    }
+    if(config->is_anonymously)
+        if(control_init(config->dir, config->control_type) == -1){
+            error_exit("control error");
+        }
     
     if(bind(server_sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1){
         error_exit("bind error");
@@ -117,7 +114,7 @@ void net_start(){
                 epoll_ctl(epfd, EPOLL_CTL_ADD, client_sock, &event);
                 printf("connected client: %d\n", client_sock);
             }else{
-                //TODO 响应在合理时间内未受到connect包应该断开链接，身份验证
+                //TODO 响应在合理时间内未受到connect包应该断开链接
                 str_len = read(epoll_events[i].data.fd, buff, BUFF_SIZE);
                 printf("sock: %d ", epoll_events[i].data.fd);
                 printf_buff("read", buff, str_len);

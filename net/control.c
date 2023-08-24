@@ -72,6 +72,7 @@ int control_connect(struct connect_packet * connect){
 }
 
 int control_destroyed(){
-    free(broker_control_strat);
+    if(connect_call_back) free(connect_call_back);
+    if(broker_control_strat) free(broker_control_strat);
     return dlclose(control_lib);
 }

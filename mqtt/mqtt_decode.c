@@ -164,7 +164,15 @@ struct subscribe_packet * mqtt_subscribe_packet_create(struct fixed_header heade
     memset(packet->payload, 0, sizeof(struct subscribe_payload) * topics);
 
     for(i = 0; *buff || *(buff + 1); i++){
+        printf_buff("buff", buff, 2);
+
         packet->payload[i].topic_filter = hex_to_string(buff);
+
+        printf("MSB:%d\n", packet->payload[i].topic_filter->length_MSB);
+        printf("LSB:%d\n", packet->payload[i].topic_filter->length_LSB);
+        printf("topic:%s\n", packet->payload[i].topic_filter->string);
+        printf("lenght:%d\n", packet->payload[i].topic_filter->string_len);
+
         buff += packet->payload[i].topic_filter->string_len + 2;
         packet->payload[i].qos = *buff++;
     }
@@ -270,6 +278,7 @@ union mqtt_packet * mqtt_pack_decode(unsigned char * buff, int * packet_len)
 {
     int i = 0, j;
     int multiplier = 1, value = 0;
+    unsigned char * packet_buff = NULL;
     struct connect_packet * connack_packet;
     struct fixed_header header;
     union mqtt_packet * mqtt_packet;
@@ -293,29 +302,37 @@ union mqtt_packet * mqtt_pack_decode(unsigned char * buff, int * packet_len)
     *packet_len = value + 2;
     header.remaining_length = value;
 
+    if(value > 0){
+        packet_buff = (unsigned char *) malloc(sizeof(unsigned char) * (value + 2));
+        memset(packet_buff, 0, sizeof(unsigned char) * (value + 2));
+        memmove(packet_buff, ++buff, value);
+
+        printf_buff("packet_buff", buff, value);
+    }
+
     switch (header.control_packet_1)
     {
     case CONNECT:
-        if((mqtt_packet->connect = mqtt_connect_packet_create(header, ++buff)) == NULL){
+        if((mqtt_packet->connect = mqtt_connect_packet_create(header, packet_buff)) == NULL){
             return NULL;
         }
         break;
     case PUBLISH:
-        mqtt_packet->publish = mqtt_publish_packet_create(header, ++buff);
+        mqtt_packet->publish = mqtt_publish_packet_create(header, packet_buff);
         break;
     case PUBACK:
     case PUBREC:
     case PUBREL:
     case PUBCOMP:
-        mqtt_packet->const_packet = mqtt_const_packet_create(header, ++buff);
+        mqtt_packet->const_packet = mqtt_const_packet_create(header, packet_buff);
         break;
     case SUBSCRIBE:
-        if((mqtt_packet->subscribe = mqtt_subscribe_packet_create(header, ++buff)) == NULL){
+        if((mqtt_packet->subscribe = mqtt_subscribe_packet_create(header, packet_buff)) == NULL){
             return NULL;
         }
         break;
     case UNSUBSCRIBE:
-        mqtt_packet->unsubscribe = mqtt_unsubscribe_packet_create(header, ++buff);
+        mqtt_packet->unsubscribe = mqtt_unsubscribe_packet_create(header, packet_buff);
         break;
     case PINGREQ:
         mqtt_packet->pingreq = mqtt_pingreq_packet_create(header);
