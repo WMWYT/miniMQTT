@@ -23,10 +23,11 @@ struct RootNode{
     UT_array * client_id;
 };
 
+//TODO 添加以$为开头的主题
+
 int intsort(const void *a, const void *b);
 int strsort(const void *_a, const void *_b);
 
-//TODO 添加以$为开头的主题
 void intercept(char * key, char * client_id);
 UT_array * search(char * key);
 void delete_topic(char * key, char * client_id);

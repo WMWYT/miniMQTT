@@ -8,6 +8,20 @@
 struct RootNode root;
 UT_icd node_icd = {sizeof(struct TrieNode), NULL, NULL, NULL};
 
+#define DELETE(A, B)                        \
+    int flag = 0;                           \
+    if((B)->children != NULL) flag = 1;     \
+    if((B)->plus_children != NULL) flag =1; \
+    if((B)->client_id != NULL)              \
+        if(utarray_front((B)->client_id) != NULL) flag = 1;\
+    if((B)->PoundNode.client_id != NULL)    \
+        if(utarray_front((B)->PoundNode.client_id) != NULL) flag = 1;\
+    if(flag == 0)                           \
+        if(!strcmp((B)->key, "+"))          \
+            HASH_DEL((A)->plus_children, B);\
+        else                                \
+            HASH_DEL((A)->children, B);
+
 int intsort(const void *a, const void *b){
     int _a = *(const int *)a;
     int _b = *(const int *)b;
@@ -133,9 +147,11 @@ void intercept(char * key, char * client_id){
         }else{
             for(i; key[i + 1] != '\0' && key[i + 1] != '/'; i++);
             
-            tmp_str = (char *) malloc(sizeof(char) * (i - tmp_int + 1));
-            memset(tmp_str, 0, sizeof(char) * (i - tmp_int + 1));
+            tmp_str = (char *) malloc(sizeof(char) * (i - tmp_int + 2));
+            memset(tmp_str, 0, sizeof(char) * (i - tmp_int + 2));
             strncpy(tmp_str, &key[tmp_int], i - tmp_int + 1);
+
+            printf("tmp_str:%s\n", &key[tmp_int]);
 
             if(!strcmp(tmp_str, "#")){
                 goto pound;
@@ -292,21 +308,26 @@ void delete_node(struct TrieNode * node, char * key, char * client_id){
     }
 
     if(key[0] == '/'){
+        tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
+        memset(tmp_str, 0, sizeof(char) * (key_len + 1));
+        memmove(tmp_str, &key[1], key_len - 1);
+
         if(key[1] == '/' || key[1] == '\0'){
             HASH_FIND_STR(node->children, "/", out_node);
             if(out_node == NULL)
                 return;
             else{
-                tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
-                memmove(tmp_str, &key[1], key_len - 1);
+                // tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
+                // memmove(tmp_str, &key[1], key_len - 1);
                 delete_node(out_node, tmp_str, client_id);
             }
         }else{
-            tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
-            memmove(tmp_str, &key[1], key_len - 1);
+            // tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
+            // memmove(tmp_str, &key[1], key_len - 1);
             delete_node(node, tmp_str, client_id);
         }
     }else{
+        //for(i = 0; key[i] != '\0' && key[i] != '/'; i++);
         for(i = 0; key[i + 1] != '\0' && key[i + 1] != '/'; i++);
         tmp_str = (char *) malloc(sizeof(char) * (i - tmp_int + 1));
         memset(tmp_str, 0, sizeof(char) * (i - tmp_int + 1));
@@ -326,43 +347,12 @@ void delete_node(struct TrieNode * node, char * key, char * client_id){
         }
 
         tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
-        memmove(tmp_str, &key[1], key_len - 1);
+        memmove(tmp_str, &key[i + 1], key_len);
         delete_node(out_node, tmp_str, client_id);
     }
 
-    if(node != NULL){
-        printf("fdsfslh\n");
-        int flag = 0;
-        if(node->children != NULL){
-            flag = 1;
-        }
-
-        if(node->plus_children != NULL){
-            flag = 1;
-        }
-
-        if(node->client_id != NULL){
-            if(utarray_front(node->client_id) != NULL)
-                flag = 1;
-        }
-
-        if(node->PoundNode.client_id != NULL){
-            if(utarray_front(node->PoundNode.client_id) != NULL)
-                flag = 1;
-        }
-
-        if(flag == 0){
-            printf("return out : %s\n", node->key);
-            printf("return : %s\n", node->key);
-
-            if(!strcmp(node->key, "+")){
-                HASH_DEL(node->plus_children, node);
-            }else{
-                HASH_DEL(node->children, node);
-            }
-            free(node);
-            free(out_node);
-        }
+    if(out_node != NULL){
+        DELETE(node, out_node);
     }
 }
 
@@ -408,6 +398,7 @@ void delete_topic(char * key, char * client_id){
         memset(tmp_str, 0, sizeof(char) * (key_len + 1));
         memmove(tmp_str, &key[i], key_len - i);
         delete_node(node, tmp_str, client_id);
+        DELETE(&root, node);
     }
 }
 

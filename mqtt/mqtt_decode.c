@@ -145,7 +145,6 @@ int subscribe_topic_len(unsigned char * buff){
 }
 
 struct subscribe_packet * mqtt_subscribe_packet_create(struct fixed_header header, unsigned char * buff){
-    //TODO 控制报文固定头必须为0x82，不然断开链接
     if(header.control_packet_1 != 8 || header.control_packet_2 != 2){
         return NULL;
     }
@@ -164,15 +163,7 @@ struct subscribe_packet * mqtt_subscribe_packet_create(struct fixed_header heade
     memset(packet->payload, 0, sizeof(struct subscribe_payload) * topics);
 
     for(i = 0; *buff || *(buff + 1); i++){
-        printf_buff("buff", buff, 2);
-
         packet->payload[i].topic_filter = hex_to_string(buff);
-
-        printf("MSB:%d\n", packet->payload[i].topic_filter->length_MSB);
-        printf("LSB:%d\n", packet->payload[i].topic_filter->length_LSB);
-        printf("topic:%s\n", packet->payload[i].topic_filter->string);
-        printf("lenght:%d\n", packet->payload[i].topic_filter->string_len);
-
         buff += packet->payload[i].topic_filter->string_len + 2;
         packet->payload[i].qos = *buff++;
     }
