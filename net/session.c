@@ -7,6 +7,7 @@
 #include "filtering.h"
 
 extern struct RootNode root;
+extern struct SYSNode sys;
 struct session *session_sock;
 struct session *session_client_id;
 
@@ -189,6 +190,18 @@ void session_topic_delete_all(){
     if(root.children != NULL){
         delete_all(root.children);
     }
+
+    if(sys.client_id != NULL){
+        utarray_clear(sys.client_id);
+    }
+
+    if(sys.children != NULL){
+        delete_all(sys.children);
+    }
+
+    if(sys.plus_children != NULL){
+        delete_all(sys.plus_children);
+    }
 }
 
 UT_array * session_topic_search(char * topic){
@@ -197,8 +210,30 @@ UT_array * session_topic_search(char * topic){
 
 void session_topic_printf_all(){
     char **p = NULL;
+    printf("-------------------system-------------\n");
     printf("#\n");
+    if(sys.client_id != NULL){
+        while ( (p=(char**)utarray_next(sys.client_id,p))) {
+            printf("%s ",*p);
+        }
+    }
 
+    printf("\n+\n");
+
+    free(p);
+    p = NULL;
+
+    if(sys.plus_children != NULL){
+        printf_all(sys.plus_children);
+    }
+
+    printf("\nnormal\n");
+
+    printf_all(sys.children);
+
+
+    printf("-------------------root-------------\n");
+    printf("#\n");
     if(root.client_id != NULL){
         while ( (p=(char**)utarray_next(root.client_id,p))) {
             printf("%s ",*p);

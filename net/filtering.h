@@ -24,6 +24,11 @@ struct RootNode{
 };
 
 //TODO 添加以$为开头的主题
+struct SYSNode{
+    struct TrieNode * children;
+    struct TrieNode * plus_children;
+    UT_array * client_id;
+};
 
 int intsort(const void *a, const void *b);
 int strsort(const void *_a, const void *_b);

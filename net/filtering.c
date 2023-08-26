@@ -6,6 +6,7 @@
 #include "filtering.h"
 
 struct RootNode root;
+struct SYSNode sys;
 UT_icd node_icd = {sizeof(struct TrieNode), NULL, NULL, NULL};
 
 #define DELETE(A, B)                        \
@@ -59,6 +60,22 @@ struct TrieNode * initNode(char * key){
         pCrawl->key = key;
         pCrawl->client_id = NULL;
         HASH_ADD_STR(root.children, key, pCrawl);
+    }
+
+    return pCrawl;
+}
+
+struct TrieNode * initSYSNode(char * key){
+    struct TrieNode *pCrawl;
+
+    HASH_FIND_STR(sys.children, key, pCrawl);
+
+    if(pCrawl == NULL){
+        pCrawl = (struct TrieNode *) malloc(sizeof(struct TrieNode));
+        memset(pCrawl, 0, sizeof * pCrawl);
+        pCrawl->key = key;
+        pCrawl->client_id = NULL;
+        HASH_ADD_STR(sys.children, key, pCrawl);
     }
 
     return pCrawl;
@@ -128,6 +145,13 @@ void intercept(char * key, char * client_id){
     }else if(key[0] == '/'){
         pCrawl = initNode("/");
         tmp_int = i = 1;
+    }else if(key[0] == '$'){
+        for(i = 1; key[i] != '\0' && key[i] != '/'; i++);
+        tmp_str = (char *) malloc(sizeof(char) * (i));
+        memset(tmp_str, 0, sizeof(char) * (i));
+        strncpy(tmp_str, &key[1], i - 1);
+        tmp_str[i] = '\0';
+        pCrawl = initSYSNode(tmp_str);
     }else{
         for(i = 0; key[i] != '\0' && key[i] != '/'; i++);
         tmp_str = (char *) malloc(sizeof(char) * (i));
@@ -232,6 +256,12 @@ UT_array * search(char * key){
     if(key[0] == '/'){
         HASH_FIND_STR(root.children, "/", tmpCrawl);
         tmp_int = i = 1;
+    }else if(key[0] == '$'){
+        for(i = 1; key[i] != '\0' && key[i] != '/'; i++);
+        tmp_str = (char *) malloc(sizeof(char) * (i + 1));
+        memset(tmp_str, 0, sizeof(char) * i + 1);
+        strncpy(tmp_str, &key[1], i - 1);
+        HASH_FIND_STR(sys.children, tmp_str, tmpCrawl);
     }else{
         for(i = 0; key[i] != '\0' && key[i] != '/'; i++);
         tmp_str = (char *) malloc(sizeof(char) * (i + 1));
@@ -317,17 +347,12 @@ void delete_node(struct TrieNode * node, char * key, char * client_id){
             if(out_node == NULL)
                 return;
             else{
-                // tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
-                // memmove(tmp_str, &key[1], key_len - 1);
                 delete_node(out_node, tmp_str, client_id);
             }
         }else{
-            // tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
-            // memmove(tmp_str, &key[1], key_len - 1);
             delete_node(node, tmp_str, client_id);
         }
     }else{
-        //for(i = 0; key[i] != '\0' && key[i] != '/'; i++);
         for(i = 0; key[i + 1] != '\0' && key[i + 1] != '/'; i++);
         tmp_str = (char *) malloc(sizeof(char) * (i - tmp_int + 1));
         memset(tmp_str, 0, sizeof(char) * (i - tmp_int + 1));
@@ -335,6 +360,7 @@ void delete_node(struct TrieNode * node, char * key, char * client_id){
 
         if(!strcmp(tmp_str, "#")){
             delete_client_id(node->PoundNode.client_id, client_id);
+            delete_client_id(node->client_id, client_id);
             return;
         }else if(!strcmp(tmp_str, "+")){
             HASH_FIND_STR(node->plus_children, "+", out_node);
@@ -382,6 +408,15 @@ void delete_topic(char * key, char * client_id){
         HASH_FIND_STR(root.children, "/", node);
         
         i = 1;
+    }else if(key[0] == '$'){
+        for(i = 1; key[i] != '\0' && key[i] != '/'; i++);
+
+        tmp_str = (char *) malloc(sizeof(char) * (i));
+        memset(tmp_str, 0, sizeof(char) * (i));
+        strncpy(tmp_str, &key[1], i - 1);
+        tmp_str[i] = '\0';
+        
+        HASH_FIND_STR(sys.children, tmp_str, node);
     }else{
         for(i = 0; key[i] != '\0' && key[i] != '/'; i++);
         
@@ -394,11 +429,19 @@ void delete_topic(char * key, char * client_id){
     }
    
     if(node != NULL){
+        printf("node:%s\n", node->key);
+        
         tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
         memset(tmp_str, 0, sizeof(char) * (key_len + 1));
         memmove(tmp_str, &key[i], key_len - i);
+
         delete_node(node, tmp_str, client_id);
-        DELETE(&root, node);
+
+        if(key[0] == '$'){
+            DELETE(&sys, node);
+        }else{
+            DELETE(&root, node);
+        }
     }
 }
 
