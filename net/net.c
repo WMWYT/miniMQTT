@@ -28,13 +28,14 @@ void client_close(int fd){
     epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
     close(fd);
     printf("close socke %d\n", fd);
-    session_printf_all();
-    session_topic_printf_all();
+    // session_printf_all();
+    // session_topic_printf_all();
     printf("-----------------------------------\n");
 }
 
 void close_socker(){
     control_destroyed();
+    session_info_delete();
     session_delete_all();
     session_topic_delete_all();
     if(mqtt_packet) free(mqtt_packet);
@@ -75,12 +76,12 @@ void net_start(){
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(port);
 
-    printf("init:%s\n", config->dir);
-
     if(config->is_anonymously)
         if(control_init(config->dir, config->control_type) == -1){
             error_exit("control error");
         }
+
+    session_info_init();
     
     if(bind(server_sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1){
         error_exit("bind error");
@@ -135,9 +136,13 @@ void net_start(){
                         str_len -= packet_len;
                     }
 
-                    session_printf_all();
-                    session_topic_printf_all();
+                    // session_printf_all();
+                    // session_topic_printf_all();
                 }else{
+                    struct session * s = NULL;
+ 
+                    HASH_FIND(hh1, session_sock, &epoll_events[i].data.fd, sizeof(int), s);
+                    if(s != NULL) session_close(s);
                     client_close(epoll_events[i].data.fd);
                 }
             }

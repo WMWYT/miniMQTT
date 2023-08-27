@@ -8,6 +8,7 @@
 
 extern struct RootNode root;
 extern struct SYSNode sys;
+struct session_info * session_info;
 struct session *session_sock;
 struct session *session_client_id;
 
@@ -44,6 +45,33 @@ char * get_rand_str(int num){
     return s;
 }
 
+/****************session_info***************/
+void session_info_init(){
+    static struct session_info info;
+    info.active = 0;
+
+    session_info = &info;
+}
+
+int session_info_acitve_updata(int num){
+    session_info->active += num;
+
+    printf("active:%d\n", session_info->active);
+    
+    if(session_info->active < 0){
+        return -1;
+    }
+
+    
+
+    return 0;
+}
+
+void session_info_delete(){
+    if(session_info) free(session_info);
+}
+
+/**************session***************/
 void session_delete(struct session * s){
     char **p = NULL;
 
@@ -81,7 +109,7 @@ int session_init(int s_sock, char * s_client_id){
         if (s){
             //TODO 这里的clean session都为1，之后把他修改为0也可以使用
             tmp = s->sock;
-        
+
             utarray_free(s->topic);
             HASH_DELETE(hh1, session_sock, s);
             HASH_DELETE(hh2, session_client_id, s);
@@ -112,6 +140,8 @@ int session_init(int s_sock, char * s_client_id){
         HASH_ADD(hh1, session_sock, sock, sizeof(int), s);
         HASH_ADD(hh2, session_client_id, client_id, strlen(s->client_id), s);
     }
+
+    session_info_acitve_updata(1);
 
     return 0;
 }
@@ -166,6 +196,19 @@ void session_delete_all(){
         if(current)
             free(current);
     }
+}
+
+void session_close(struct session *s){
+    char **p = NULL;
+    while(p = (char **) utarray_next(s->topic, p)){
+        session_topic_unsubscribe(*p, s->client_id);
+    }
+
+    if(session_info_acitve_updata(-1) < 0){
+        printf("error session acitve.\n");
+    }
+
+    session_delete(s);
 }
 
 /*******************************topic************************************/

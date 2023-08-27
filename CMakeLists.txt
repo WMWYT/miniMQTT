@@ -12,5 +12,5 @@ add_subdirectory(control)
 add_executable(miniMQTT miniMQTT.c)
 add_executable(test test/test.c test/test_event.c)
 
-target_link_libraries(miniMQTT mqtt net config iniparser zlog log)
+target_link_libraries(miniMQTT mqtt net config iniparser log)
 target_link_libraries(test mqtt log)

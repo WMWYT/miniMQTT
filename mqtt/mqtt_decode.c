@@ -301,40 +301,39 @@ union mqtt_packet * mqtt_pack_decode(unsigned char * buff, int * packet_len)
         printf_buff("packet_buff", buff, value);
     }
 
-    switch (header.control_packet_1)
-    {
-    case CONNECT:
-        if((mqtt_packet->connect = mqtt_connect_packet_create(header, packet_buff)) == NULL){
+    switch (header.control_packet_1){
+        case CONNECT:
+            if((mqtt_packet->connect = mqtt_connect_packet_create(header, packet_buff)) == NULL){
+                return NULL;
+            }
+            break;
+        case PUBLISH:
+            mqtt_packet->publish = mqtt_publish_packet_create(header, packet_buff);
+            break;
+        case PUBACK:
+        case PUBREC:
+        case PUBREL:
+        case PUBCOMP:
+            mqtt_packet->const_packet = mqtt_const_packet_create(header, packet_buff);
+            break;
+        case SUBSCRIBE:
+            if((mqtt_packet->subscribe = mqtt_subscribe_packet_create(header, packet_buff)) == NULL){
+                return NULL;
+            }
+            break;
+        case UNSUBSCRIBE:
+            mqtt_packet->unsubscribe = mqtt_unsubscribe_packet_create(header, packet_buff);
+            break;
+        case PINGREQ:
+            mqtt_packet->pingreq = mqtt_pingreq_packet_create(header);
+            break;
+        case DISCONNECT:
+            mqtt_packet->disconnect = mqtt_disconnect_packet_create(header);
+            break;
+        default:
+            printf("other packet\n");
             return NULL;
-        }
-        break;
-    case PUBLISH:
-        mqtt_packet->publish = mqtt_publish_packet_create(header, packet_buff);
-        break;
-    case PUBACK:
-    case PUBREC:
-    case PUBREL:
-    case PUBCOMP:
-        mqtt_packet->const_packet = mqtt_const_packet_create(header, packet_buff);
-        break;
-    case SUBSCRIBE:
-        if((mqtt_packet->subscribe = mqtt_subscribe_packet_create(header, packet_buff)) == NULL){
-            return NULL;
-        }
-        break;
-    case UNSUBSCRIBE:
-        mqtt_packet->unsubscribe = mqtt_unsubscribe_packet_create(header, packet_buff);
-        break;
-    case PINGREQ:
-        mqtt_packet->pingreq = mqtt_pingreq_packet_create(header);
-        break;
-    case DISCONNECT:
-        mqtt_packet->disconnect = mqtt_disconnect_packet_create(header);
-        break;
-    default:
-        printf("other packet\n");
-        return NULL;
-        break;
+            break;
     }
 
     return mqtt_packet;

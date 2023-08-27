@@ -5,8 +5,10 @@
 #include "control.h"
 
 void * control_lib;
+struct system_info * system_info;
 int (*broker_control_strat)();
 static int (*connect_call_back)(void *);
+static int (*system_call_back)(void *);
 
 int control_init(const char * dl_dir, char * type){
     void (*broker_control_info)(char *);
@@ -54,17 +56,37 @@ int control_init(const char * dl_dir, char * type){
     return broker_control_strat();
 }
 
-int control_register(int (*call_back)(void *), int packet_type){//TODO 将connect包传入回调函数
-    switch (packet_type)
+int control_register(int (*call_back)(void *), int type){//TODO 将其他包传入回调函数
+    switch (type)
     {
-    case CONNECT:
-        connect_call_back = call_back;
-        break;
-    default:
-        return -1;
+        case SYSTEM:
+            system_call_back = call_back;
+            break;
+        case CONNECT:
+            connect_call_back = call_back;
+            break;
+        default:
+            return -1;
     }
 
     return 0;
+}
+
+void system_info_init(){
+    static struct system_info info;
+    info.version = "0.0.1";
+    info.time = "8.27";
+    info.active = 0;
+
+    system_info = &info;
+}
+
+void system_info_update(struct system_info * info){
+    
+}
+
+int system_connect(struct system_info * info){
+    return system_call_back(info);
 }
 
 int control_connect(struct connect_packet * connect){

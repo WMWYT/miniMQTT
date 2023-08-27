@@ -16,14 +16,6 @@ union mqtt_packet * mqtt_packet;
 extern struct session * session_sock;
 extern struct session * session_client_id;
 
-void session_close(struct session *s){
-    char **p = NULL;
-    while(p = (char **) utarray_next(s->topic, p)){
-        session_topic_unsubscribe(*p, s->client_id);
-    }
-    session_delete(s);
-}
-
 int event_handle(int * packet_len, char * buff, int fd){
     struct session * s;
     struct session_topic * st;
@@ -53,7 +45,7 @@ int event_handle(int * packet_len, char * buff, int fd){
                 if(session_flag > 0){
                     return session_flag; //大于0 断开之前会话client_id相同的sock
                 }
-
+                
                 return 0;
             }else{
                 printf("Repeat connect\n");

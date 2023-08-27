@@ -331,9 +331,10 @@ void delete_node(struct TrieNode * node, char * key, char * client_id){
     char * dest_str;
     int i = 0;
 
-    if(key_len > 0)
-        printf("key:%s\n", key);
-    else{
+    // if(key_len > 0)
+    //     printf("key:%s\n", key);
+    // else
+    if(key == 0){
         delete_client_id(node->client_id, client_id);
     }
 
@@ -429,8 +430,6 @@ void delete_topic(char * key, char * client_id){
     }
    
     if(node != NULL){
-        printf("node:%s\n", node->key);
-        
         tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
         memset(tmp_str, 0, sizeof(char) * (key_len + 1));
         memmove(tmp_str, &key[i], key_len - i);

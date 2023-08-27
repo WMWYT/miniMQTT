@@ -3,7 +3,6 @@
 #include <getopt.h>
 #include <signal.h>
 #include "net/net.h"
-#include "utils/zlog/zlog.h"
 #include "config/config.h"
 
 void printf_help(){
@@ -31,8 +30,8 @@ int main(int argc, char * const argv[])
 
     while( (opt = getopt(argc, argv, "p:")) != -1 )
     {
-           switch(opt)
-          {
+        switch(opt)
+        {
             case 'p':
                 config->port = atoi(optarg);
                 break;
@@ -43,7 +42,7 @@ int main(int argc, char * const argv[])
             default:
                 printf("default, result=%c\n",opt);
                 break;
-           }
+        }
     }
 
     net_start();
