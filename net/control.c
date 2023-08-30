@@ -57,8 +57,7 @@ int control_init(const char * dl_dir, char * type){
 }
 
 int control_register(int (*call_back)(void *), int type){//TODO 将其他包传入回调函数
-    switch (type)
-    {
+    switch (type){
         case SYSTEM:
             system_call_back = call_back;
             break;
@@ -81,12 +80,22 @@ void system_info_init(){
     system_info = &info;
 }
 
-void system_info_update(struct system_info * info){
-    
+int control_system(struct system_info * info){
+    return system_call_back(info);
 }
 
-int system_connect(struct system_info * info){
-    return system_call_back(info);
+void system_info_update(void * info, int change){
+    switch (change){
+        case 0:
+            system_info->active = *(int *)info;
+            system_info->change = change;
+            break;
+        default:
+            printf("not have this change [%d]\n", change);
+            return;
+    }
+
+    control_system(system_info);
 }
 
 int control_connect(struct connect_packet * connect){

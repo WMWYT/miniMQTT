@@ -76,11 +76,14 @@ void net_start(){
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(port);
 
+    control_init(config->system_dir, "system");
+
     if(config->is_anonymously)
         if(control_init(config->dir, config->control_type) == -1){
             error_exit("control error");
         }
-
+    
+    system_info_init();
     session_info_init();
     
     if(bind(server_sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1){

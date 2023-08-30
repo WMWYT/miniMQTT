@@ -147,11 +147,18 @@ void intercept(char * key, char * client_id){
         tmp_int = i = 1;
     }else if(key[0] == '$'){
         for(i = 1; key[i] != '\0' && key[i] != '/'; i++);
-        tmp_str = (char *) malloc(sizeof(char) * (i));
-        memset(tmp_str, 0, sizeof(char) * (i));
-        strncpy(tmp_str, &key[1], i - 1);
-        tmp_str[i] = '\0';
-        pCrawl = initSYSNode(tmp_str);
+        if(i == 1){
+            pCrawl = initSYSNode("/");
+            tmp_int = i = 2;
+        }else{    
+            tmp_str = (char *) malloc(sizeof(char) * (i));
+            memset(tmp_str, 0, sizeof(char) * (i));
+            strncpy(tmp_str, &key[1], i - 1);
+            tmp_str[i] = '\0';
+
+            printf("tmp_str:%s\n", tmp_str);
+            pCrawl = initSYSNode(tmp_str);
+        }
     }else{
         for(i = 0; key[i] != '\0' && key[i] != '/'; i++);
         tmp_str = (char *) malloc(sizeof(char) * (i));
@@ -175,7 +182,7 @@ void intercept(char * key, char * client_id){
             memset(tmp_str, 0, sizeof(char) * (i - tmp_int + 2));
             strncpy(tmp_str, &key[tmp_int], i - tmp_int + 1);
 
-            printf("tmp_str:%s\n", &key[tmp_int]);
+            //printf("tmp_str:%s\n", &key[tmp_int]);
 
             if(!strcmp(tmp_str, "#")){
                 goto pound;
@@ -249,19 +256,26 @@ UT_array * search(char * key){
     utarray_new(tmp_array, &ut_str_icd);
     utarray_new(pCrawl, &node_icd);
 
-    if(root.client_id != NULL){
-        utarray_concat(tmp_array, root.client_id);
-    }
+    if(root.client_id != NULL)
+        if(utarray_front(root.client_id) != NULL){
+            utarray_concat(tmp_array, root.client_id);
+        }
 
     if(key[0] == '/'){
         HASH_FIND_STR(root.children, "/", tmpCrawl);
         tmp_int = i = 1;
     }else if(key[0] == '$'){
         for(i = 1; key[i] != '\0' && key[i] != '/'; i++);
-        tmp_str = (char *) malloc(sizeof(char) * (i + 1));
-        memset(tmp_str, 0, sizeof(char) * i + 1);
-        strncpy(tmp_str, &key[1], i - 1);
-        HASH_FIND_STR(sys.children, tmp_str, tmpCrawl);
+        if(i == 1){
+            HASH_FIND_STR(sys.children, "/", tmpCrawl);
+            tmp_int = i = 2;
+        }else{    
+            tmp_str = (char *) malloc(sizeof(char) * (i));
+            memset(tmp_str, 0, sizeof(char) * (i));
+            strncpy(tmp_str, &key[1], i - 1);
+            tmp_str[i] = '\0';
+            HASH_FIND_STR(sys.children, tmp_str, tmpCrawl);
+        }
     }else{
         for(i = 0; key[i] != '\0' && key[i] != '/'; i++);
         tmp_str = (char *) malloc(sizeof(char) * (i + 1));
@@ -278,9 +292,7 @@ UT_array * search(char * key){
         utarray_push_back(pCrawl, root.plus_children);
     }
 
-    if(utarray_front(pCrawl) == NULL){
-        return NULL;
-    }else{
+    if(utarray_front(pCrawl) != NULL){
         for(; key[i] != '\0'; i++){
             if(key[i] == '/'){
                 if(key[i + 1] == '/' || i == 0 || key[i + 1] == '\0'){
@@ -307,6 +319,7 @@ UT_array * search(char * key){
     }
 
     deduplication(tmp_array);
+
     return tmp_array;
 }
 
@@ -334,7 +347,9 @@ void delete_node(struct TrieNode * node, char * key, char * client_id){
     // if(key_len > 0)
     //     printf("key:%s\n", key);
     // else
-    if(key == 0){
+    //     delete_client_id(node->client_id, client_id);
+
+    if(key_len <= 0){
         delete_client_id(node->client_id, client_id);
     }
 
@@ -411,13 +426,16 @@ void delete_topic(char * key, char * client_id){
         i = 1;
     }else if(key[0] == '$'){
         for(i = 1; key[i] != '\0' && key[i] != '/'; i++);
-
-        tmp_str = (char *) malloc(sizeof(char) * (i));
-        memset(tmp_str, 0, sizeof(char) * (i));
-        strncpy(tmp_str, &key[1], i - 1);
-        tmp_str[i] = '\0';
-        
-        HASH_FIND_STR(sys.children, tmp_str, node);
+        if(i == 1){
+            HASH_FIND_STR(sys.children, "/", node);
+            i = 2;
+        }else{    
+            tmp_str = (char *) malloc(sizeof(char) * (i));
+            memset(tmp_str, 0, sizeof(char) * (i));
+            strncpy(tmp_str, &key[1], i - 1);
+            tmp_str[i] = '\0';
+            HASH_FIND_STR(sys.children, tmp_str, node);
+        }
     }else{
         for(i = 0; key[i] != '\0' && key[i] != '/'; i++);
         

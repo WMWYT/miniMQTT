@@ -1,4 +1,5 @@
 #include "config.h"
+#include <signal.h>
 #include "../utils/iniparser/iniparser.h"
 
 struct config * config;
@@ -12,6 +13,13 @@ void config_init(){
     iniparser_dump(ini, stdout);
 
     conf.port = iniparser_getint(ini, "info:port", DEFAULT_PORT);
+
+    strcpy(conf.system_dir, iniparser_getstring(ini, "system:dir", NULL));
+    if(conf.system_dir == NULL){
+        printf("config error you not have set [system:dir]");
+        exit(0);
+    }
+
     conf.is_anonymously = iniparser_getboolean(ini, "login:anonymously", DEFAULT_IS_ANONYMOUSLY);
 
     if(conf.is_anonymously){

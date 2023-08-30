@@ -9,7 +9,7 @@ void broker_control_info(char * control_type){
     strcpy(control_type, type);
 }
 
-int connect_call_back(void * packet, void *){
+int connect_call_back(void * packet){
     struct connect_packet * connect = (struct connect_packet *) packet;
 
     if(connect->payload.user_name == NULL || connect->payload.password == NULL){

@@ -9,6 +9,7 @@
 
 struct config{
     int port;
+    char system_dir[256];
     int is_anonymously;
     char control_type[64];
     char dir[256];

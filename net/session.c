@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include "session.h"
 #include "filtering.h"
+#include "control.h"
 
 extern struct RootNode root;
 extern struct SYSNode sys;
@@ -62,7 +63,7 @@ int session_info_acitve_updata(int num){
         return -1;
     }
 
-    
+    system_info_update(&session_info->active, 0);
 
     return 0;
 }
@@ -234,10 +235,6 @@ void session_topic_delete_all(){
         delete_all(root.children);
     }
 
-    if(sys.client_id != NULL){
-        utarray_clear(sys.client_id);
-    }
-
     if(sys.children != NULL){
         delete_all(sys.children);
     }
@@ -254,14 +251,7 @@ UT_array * session_topic_search(char * topic){
 void session_topic_printf_all(){
     char **p = NULL;
     printf("-------------------system-------------\n");
-    printf("#\n");
-    if(sys.client_id != NULL){
-        while ( (p=(char**)utarray_next(sys.client_id,p))) {
-            printf("%s ",*p);
-        }
-    }
-
-    printf("\n+\n");
+    printf("+\n");
 
     free(p);
     p = NULL;

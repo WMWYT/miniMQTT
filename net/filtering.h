@@ -27,7 +27,6 @@ struct RootNode{
 struct SYSNode{
     struct TrieNode * children;
     struct TrieNode * plus_children;
-    UT_array * client_id;
 };
 
 int intsort(const void *a, const void *b);
