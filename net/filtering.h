@@ -23,7 +23,6 @@ struct RootNode{
     UT_array * client_id;
 };
 
-//TODO 添加以$为开头的主题
 struct SYSNode{
     struct TrieNode * children;
     struct TrieNode * plus_children;

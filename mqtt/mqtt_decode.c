@@ -107,8 +107,8 @@ struct connect_packet *mqtt_connect_packet_create(struct fixed_header header, un
         packet->payload.will_topic = hex_to_string(buff);
         buff += packet->payload.will_topic->string_len + 2;
         
-        packet->payload.will_message = hex_to_string(buff);
-        buff += packet->payload.will_message->string_len + 2;
+        packet->payload.will_playload = hex_to_string(buff);
+        buff += packet->payload.will_playload->string_len + 2;
     }
 
     if((packet->variable_header.connect_flags >> 7) & 1){

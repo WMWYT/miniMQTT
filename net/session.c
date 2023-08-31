@@ -6,6 +6,7 @@
 #include "session.h"
 #include "filtering.h"
 #include "control.h"
+#include "../mqtt/mqtt_encode.h"
 
 extern struct RootNode root;
 extern struct SYSNode sys;
@@ -46,32 +47,6 @@ char * get_rand_str(int num){
     return s;
 }
 
-/****************session_info***************/
-void session_info_init(){
-    static struct session_info info;
-    info.active = 0;
-
-    session_info = &info;
-}
-
-int session_info_acitve_updata(int num){
-    session_info->active += num;
-
-    printf("active:%d\n", session_info->active);
-    
-    if(session_info->active < 0){
-        return -1;
-    }
-
-    system_info_update(&session_info->active, 0);
-
-    return 0;
-}
-
-void session_info_delete(){
-    if(session_info) free(session_info);
-}
-
 /**************session***************/
 void session_delete(struct session * s){
     char **p = NULL;
@@ -93,7 +68,7 @@ void session_delete(struct session * s){
         free(s);
 }
 
-int session_init(int s_sock, char * s_client_id){
+struct session * session_init(int s_sock, char * s_client_id){
     struct session * s;
     char * client_id;
     int tmp = 0;
@@ -102,7 +77,7 @@ int session_init(int s_sock, char * s_client_id){
 
     if (s){
         session_delete(s);
-        return -1;
+        return NULL;
     }
 
     if(s_client_id != NULL){
@@ -110,21 +85,21 @@ int session_init(int s_sock, char * s_client_id){
         if (s){
             //TODO 这里的clean session都为1，之后把他修改为0也可以使用
             tmp = s->sock;
-
             utarray_free(s->topic);
+            memset(s->will_topic, 0, sizeof(s->will_topic));
             HASH_DELETE(hh1, session_sock, s);
             HASH_DELETE(hh2, session_client_id, s);
 
             s = (struct session *) malloc(sizeof * s);
             memset(s, 0, sizeof *s);
-            s->sock = s_sock;
+            s->sock = tmp;
             strcpy(s->client_id, s_client_id);
             utarray_new(s->topic, &ut_str_icd);
 
             HASH_ADD(hh1, session_sock, sock, sizeof(int), s);
             HASH_ADD(hh2, session_client_id, client_id, strlen(s->client_id), s);
 
-            return tmp;
+            return s;
         }
     } else {
         s_client_id = (char *) malloc(sizeof(char) * 9);
@@ -142,9 +117,28 @@ int session_init(int s_sock, char * s_client_id){
         HASH_ADD(hh2, session_client_id, client_id, strlen(s->client_id), s);
     }
 
-    session_info_acitve_updata(1);
+    int a = 1;
+    system_info_update(&a, 0);
 
-    return 0;
+    return s;
+}
+
+void session_add_will_topic(char * s_will_topic, struct session *s){
+    if(s->will_topic == NULL){
+        s->will_topic = (char *) malloc(sizeof(char) * (strlen(s_will_topic) + 1));
+        memset(s->will_topic, 0, sizeof(char) * (strlen(s_will_topic) + 1));
+    }
+
+    memmove(s->will_topic, s_will_topic, strlen(s_will_topic));
+}
+
+void session_add_will_playload(char * s_will_playload, struct session * s){
+    if(s->will_playload == NULL){
+        s->will_playload = (char *)malloc(sizeof(char) * (strlen(s_will_playload) + 1));
+        memset(s->will_playload, 0, sizeof(char) * (strlen(s_will_playload) + 1));
+    }
+
+    memmove(s->will_playload, s_will_playload, strlen(s_will_playload));
 }
 
 void session_subscribe_topic(char * s_topic, struct session *s){
@@ -177,8 +171,10 @@ void session_printf_all(){
     HASH_ITER(hh1, session_sock, current, tmp) {
         printf("sock %d: %s subscribe topic -- ", current->sock, current->client_id);
         while((p = (char **) utarray_next(current->topic, p)))
-           printf("%s ", *p); 
+           printf("%s ", *p);
         printf("\n");
+
+        printf("will topic -- %s playload -- %s\n", current->will_topic, current->will_playload);
     }
 }
 
@@ -199,21 +195,33 @@ void session_delete_all(){
     }
 }
 
+void publish_will_message(struct session * s){
+    struct session * will_s;
+    UT_array * will_client_id;
+    int buff_size = 0;
+    char playload[10] = {0};
+    char buff[255] = {0};
+    char ** p = NULL;
+
+    will_client_id = session_topic_search(s->will_topic);
+    if(utarray_front(will_client_id) != NULL){
+        buff_size = mqtt_publish_encode(s->will_topic, s->will_playload, buff);
+        while((p = (char **) utarray_next(will_client_id, p))){
+            HASH_FIND(hh2, session_client_id, *p, strlen(*p), will_s);
+            write(will_s->sock, buff, buff_size);
+        }
+    }
+}
+
 void session_close(struct session *s){
-    char **p = NULL;
-    while(p = (char **) utarray_next(s->topic, p)){
-        session_topic_unsubscribe(*p, s->client_id);
-    }
+    int a = -1;
 
-    if(session_info_acitve_updata(-1) < 0){
-        printf("error session acitve.\n");
-    }
-
+    publish_will_message(s);
     session_delete(s);
+    system_info_update(&a, 0);
 }
 
 /*******************************topic************************************/
-
 void session_topic_subscribe(char * s_topic, char * s_client_id){
     intercept(s_topic, s_client_id);
 }

@@ -97,11 +97,11 @@ char * conncet_packet_to_hex(struct connect_packet packet){
         memcpy(buff, packet.payload.will_topic->string, packet.payload.will_topic->string_len);
         buff += packet.payload.will_topic->string_len;
 
-        *buff++ = packet.payload.will_message->length_MSB;
-        *buff++ = packet.payload.will_message->length_LSB;
+        *buff++ = packet.payload.will_playload->length_MSB;
+        *buff++ = packet.payload.will_playload->length_LSB;
 
-        memcpy(buff, packet.payload.will_message->string, packet.payload.will_message->string_len);
-        buff += packet.payload.will_message->string_len;
+        memcpy(buff, packet.payload.will_playload->string, packet.payload.will_playload->string_len);
+        buff += packet.payload.will_playload->string_len;
     }
 
     if(packet.variable_header.connect_flags >> 6 & 1){
@@ -157,9 +157,9 @@ char * mqtt_conncet_encode(unsigned char c_flag, int keep_alive
 
     if(c_flag >> 2 & 1){
         packet.payload.will_topic = string_encode(will_topic);
-        packet.payload.will_message = string_encode(will_message);
+        packet.payload.will_playload = string_encode(will_message);
         packet.connect_header.remaining_length += packet.payload.will_topic->string_len + \
-                                                  packet.payload.will_message->string_len +4;
+                                                  packet.payload.will_playload->string_len +4;
     }
 
     if(c_flag >> 6 & 1){
@@ -216,7 +216,6 @@ int mqtt_publish_encode(unsigned char * topic, unsigned char * payload, unsigned
     packet.variable_header.topic_name = string_encode(topic);
 
     packet.payload = payload;
-    printf("packet.payload:%s strlen:%d\n", packet.variable_header.topic_name->string, packet.variable_header.topic_name->string_len);
 
     packet.publish_header.remaining_length = packet.variable_header.topic_name->string_len + strlen(packet.payload) + 2;
 

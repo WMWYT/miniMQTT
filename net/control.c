@@ -9,6 +9,7 @@ struct system_info * system_info;
 int (*broker_control_strat)();
 static int (*connect_call_back)(void *);
 static int (*system_call_back)(void *);
+static int (*subscribe_call_back)(void *);
 
 int control_init(const char * dl_dir, char * type){
     void (*broker_control_info)(char *);
@@ -64,6 +65,9 @@ int control_register(int (*call_back)(void *), int type){//TODO 将其他包传�
         case CONNECT:
             connect_call_back = call_back;
             break;
+        case SUBSCRIBE:
+            subscribe_call_back = call_back;
+            break;
         default:
             return -1;
     }
@@ -87,8 +91,13 @@ int control_system(struct system_info * info){
 void system_info_update(void * info, int change){
     switch (change){
         case 0:
-            system_info->active = *(int *)info;
+            system_info->active += *(int *)info;
             system_info->change = change;
+
+            if(system_info->active < 0){
+                printf("error active num\n");
+                return;
+            }
             break;
         default:
             printf("not have this change [%d]\n", change);
@@ -98,12 +107,21 @@ void system_info_update(void * info, int change){
     control_system(system_info);
 }
 
+void session_info_delete(){
+    if(system_info) free(system_info);
+}
+
 int control_connect(struct connect_packet * connect){
     return connect_call_back(connect);
 }
 
+int control_subscribe(struct subscribe_packet * subscribe){
+    return subscribe_call_back(subscribe);
+}
+
 int control_destroyed(){
-    if(connect_call_back) free(connect_call_back);
     if(broker_control_strat) free(broker_control_strat);
+    if(connect_call_back) free(connect_call_back);
+    if(subscribe_call_back) free(subscribe_call_back);
     return dlclose(control_lib);
 }

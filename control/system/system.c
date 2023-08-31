@@ -30,21 +30,21 @@ int system_call_back(void * system_date){
     // version_client_id = session_topic_search("$SYS/broker/version");
     // time_client_id = session_topic_search("$SYS/broker/time");
 
-    // switch (system_change){
-    //     case 0:
-    //         active_client_id = session_topic_search("$SYS/broker/active");
-    //         if(active_client_id != NULL){
-    //             sprintf(playload, "%d", info->active);
-    //             buff_size = mqtt_publish_encode("$SYS/broker/active", playload, buff);
-    //             while((p = (char **) utarray_next(active_client_id, p))){
-    //                 HASH_FIND(hh2, session_client_id, *p, strlen(*p), s);
-    //                 write(s->sock, buff, buff_size);
-    //             }
-    //         }
-    //         break;
-    //     default:
-    //         break;
-    // }
+    switch (system_change){
+        case 0:
+            active_client_id = session_topic_search("$SYS/broker/active");
+            if(utarray_front(active_client_id) != NULL){
+                sprintf(playload, "%d", info->active);
+                buff_size = mqtt_publish_encode("$SYS/broker/active", playload, buff);
+                while((p = (char **) utarray_next(active_client_id, p))){
+                    HASH_FIND(hh2, session_client_id, *p, strlen(*p), s);
+                    write(s->sock, buff, buff_size);
+                }
+            }
+            break;
+        default:
+            break;
+    }
 }
 
 int broker_control_strat(){

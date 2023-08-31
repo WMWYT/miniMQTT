@@ -19,10 +19,9 @@ extern struct session * session_client_id;
 int event_handle(int * packet_len, char * buff, int fd){
     struct session * s;
     struct session_topic * st;
-
-    int session_flag;
-    //TODO 增加登陆功能,这里的qos>0只是能实现消息分发，没有qos>0的特性
+    struct session * session_flag;
     
+    //TODO 这里的qos>0只是能实现消息分发，没有qos>0的特性
     HASH_FIND(hh1, session_sock, &fd, sizeof(int), s);
     mqtt_packet = mqtt_pack_decode(buff, packet_len);
 
@@ -41,11 +40,19 @@ int event_handle(int * packet_len, char * buff, int fd){
         send(fd, mqtt_connack_encode(CONNACK, error_code), 4, 0);
 
         if(error_code == CONNECT_ACCEPTED){
-            if((session_flag = session_init(fd, mqtt_packet->connect->payload.client_id->string)) >= 0){
-                if(session_flag > 0){
-                    return session_flag; //大于0 断开之前会话client_id相同的sock
+            if((session_flag = session_init(fd, mqtt_packet->connect->payload.client_id->string)) != NULL){
+                //TODO 实现遗嘱消息
+                if(mqtt_packet->connect->variable_header.connect_flags >> 2 & 1){
+                    session_add_will_topic(mqtt_packet->connect->payload.will_topic->string, session_flag);
+                    session_add_will_playload(mqtt_packet->connect->payload.will_playload->string, session_flag);
                 }
-                
+
+                if(session_flag->sock != fd){
+                    int tmp = session_flag->sock;
+                    session_flag->sock = fd;
+                    return tmp; //大于0 断开之前会话client_id相同的sock
+                }
+
                 return 0;
             }else{
                 printf("Repeat connect\n");
@@ -93,6 +100,9 @@ int event_handle(int * packet_len, char * buff, int fd){
     }
 
     if(mqtt_packet->subscribe->subscribe_header.control_packet_1 == SUBSCRIBE){
+        if(config->is_anonymously)
+            control_subscribe(mqtt_packet->subscribe);
+
         write(fd, mqtt_suback_encode(mqtt_packet->subscribe->topic_size), mqtt_packet->subscribe->topic_size + 4);
         for(int i = 0; i < mqtt_packet->subscribe->topic_size; i++){
             session_subscribe_topic(mqtt_packet->subscribe->payload[i].topic_filter->string, s);

@@ -66,7 +66,7 @@ struct connect_packet{
     struct {
         mqtt_string * client_id;
         mqtt_string * will_topic;
-        mqtt_string * will_message;
+        mqtt_string * will_playload;
         mqtt_string * user_name;
         mqtt_string * password;
     }payload;
@@ -102,7 +102,6 @@ struct mqtt_const_packet{
         unsigned char byte2;
     }variable_header;
 };
-
 
 struct suback_packet{
     fixed_header suback_header;
