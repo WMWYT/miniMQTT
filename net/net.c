@@ -28,7 +28,7 @@ void client_close(int fd){
     epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
     close(fd);
     printf("close socke %d\n", fd);
-    session_printf_all();
+    //session_printf_all();
     // session_topic_printf_all();
     printf("-----------------------------------\n");
 }
@@ -136,7 +136,7 @@ void net_start(){
                         str_len -= packet_len;
                     }
 
-                    session_printf_all();
+                    // session_printf_all();
                     // session_topic_printf_all();
                 }else{
                     struct session * s = NULL;

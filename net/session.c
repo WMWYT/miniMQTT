@@ -204,11 +204,13 @@ void publish_will_message(struct session * s){
     char ** p = NULL;
 
     will_client_id = session_topic_search(s->will_topic);
-    if(utarray_front(will_client_id) != NULL){
-        buff_size = mqtt_publish_encode(s->will_topic, s->will_playload, buff);
-        while((p = (char **) utarray_next(will_client_id, p))){
-            HASH_FIND(hh2, session_client_id, *p, strlen(*p), will_s);
-            write(will_s->sock, buff, buff_size);
+    if(will_client_id != NULL){
+        if(utarray_front(will_client_id) != NULL){
+            buff_size = mqtt_publish_encode(s->will_topic, s->will_playload, buff);
+            while((p = (char **) utarray_next(will_client_id, p))){
+                HASH_FIND(hh2, session_client_id, *p, strlen(*p), will_s);
+                write(will_s->sock, buff, buff_size);
+            }
         }
     }
 }
@@ -253,7 +255,10 @@ void session_topic_delete_all(){
 }
 
 UT_array * session_topic_search(char * topic){
-    return search(topic);
+    if(topic != NULL)
+        return search(topic);
+    
+    return NULL;
 }
 
 void session_topic_printf_all(){

@@ -40,3 +40,9 @@ dir = ./control/libfileextend.so;
 ## 客户端链接
 
 只要支持MQTT V3.1.1版本的客户端都可以链接此服务器。
+
+## TODO
+
+* 添加线程
+* 实现QOS、清理会话
+* 打包
