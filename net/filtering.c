@@ -344,11 +344,6 @@ void delete_node(struct TrieNode * node, char * key, char * client_id){
     char * dest_str;
     int i = 0;
 
-    // if(key_len > 0)
-    //     printf("key:%s\n", key);
-    // else
-    //     delete_client_id(node->client_id, client_id);
-
     if(key_len <= 0){
         delete_client_id(node->client_id, client_id);
     }
@@ -422,7 +417,7 @@ void delete_topic(char * key, char * client_id){
         i = 1;
     }else if(key[0] == '/'){
         HASH_FIND_STR(root.children, "/", node);
-        
+
         i = 1;
     }else if(key[0] == '$'){
         for(i = 1; key[i] != '\0' && key[i] != '/'; i++);
@@ -446,7 +441,7 @@ void delete_topic(char * key, char * client_id){
         
         HASH_FIND_STR(root.children, tmp_str, node);
     }
-   
+
     if(node != NULL){
         tmp_str = (char *) malloc(sizeof(char) * (key_len + 1));
         memset(tmp_str, 0, sizeof(char) * (key_len + 1));
