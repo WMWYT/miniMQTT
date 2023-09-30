@@ -1,1 +1,0 @@
-/usr/bin/gcc -fPIC -g -shared -Wl,-soname,libmqtt.so -o libmqtt.so CMakeFiles/mqtt.dir/mqtt_decode.c.o CMakeFiles/mqtt.dir/mqtt_encode.c.o  -Wl,-rpath,/home/robot/miniMQTT/build/log ../log/liblog.so 

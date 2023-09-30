@@ -1,1 +1,0 @@
-/usr/bin/gcc -fPIC -g -shared -Wl,-soname,libtestextend.so -o libtestextend.so CMakeFiles/testextend.dir/test/test.c.o  -Wl,-rpath,/home/robot/miniMQTT/build/net ../net/libcontrol.so 

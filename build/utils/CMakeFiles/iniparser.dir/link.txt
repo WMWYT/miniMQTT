@@ -1,1 +1,0 @@
-/usr/bin/gcc -fPIC -g -shared -Wl,-soname,libiniparser.so -o libiniparser.so CMakeFiles/iniparser.dir/iniparser/dictionary.c.o CMakeFiles/iniparser.dir/iniparser/iniparser.c.o 

@@ -1,1 +1,0 @@
-/usr/bin/gcc -fPIC -g -shared -Wl,-soname,libcontrol.so -o libcontrol.so CMakeFiles/control.dir/control.c.o 

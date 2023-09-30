@@ -1,1 +1,0 @@
-/usr/bin/gcc -fPIC -g -shared -Wl,-soname,libfileextend.so -o libfileextend.so CMakeFiles/fileextend.dir/file/file_extend.c.o  -Wl,-rpath,/home/robot/miniMQTT/build/net ../net/libcontrol.so 
