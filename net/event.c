@@ -56,6 +56,7 @@ int event_handle(int * packet_len, char * buff, int fd){
                 return 0;
             }else{
                 printf("Repeat connect\n");
+                
                 if(s) session_close(s);
             }
         }
