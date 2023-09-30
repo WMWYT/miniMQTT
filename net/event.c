@@ -37,7 +37,7 @@ int event_handle(int * packet_len, char * buff, int fd){
             error_code = control_connect(mqtt_packet->connect);
         }
 
-        send(fd, mqtt_connack_encode(CONNACK, error_code), 4, 0);
+        send(fd, mqtt_connack_encode(!(mqtt_packet->connect->variable_header.connect_flags >> 1), error_code), 4, 0);
 
         if(error_code == CONNECT_ACCEPTED){
             if((session_flag = session_init(fd, mqtt_packet->connect->payload.client_id->string)) != NULL){
@@ -56,7 +56,6 @@ int event_handle(int * packet_len, char * buff, int fd){
                 return 0;
             }else{
                 printf("Repeat connect\n");
-                
                 if(s) session_close(s);
             }
         }

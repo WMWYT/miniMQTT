@@ -56,7 +56,6 @@ void session_delete(struct session * s){
             session_topic_unsubscribe(*p, s->client_id);
         }
 
-
         if(utarray_front(s->topic) != NULL){
             utarray_free(s->topic);
         }
