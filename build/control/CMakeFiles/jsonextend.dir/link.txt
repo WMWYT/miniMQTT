@@ -1,0 +1,1 @@
+/usr/bin/gcc -fPIC -g -shared -Wl,-soname,libjsonextend.so -o libjsonextend.so CMakeFiles/jsonextend.dir/json/json_extend.c.o  -Wl,-rpath,/home/robot/miniMQTT/build/net ../net/libcontrol.so 

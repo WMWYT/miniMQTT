@@ -1,0 +1,7 @@
+/usr/local/miniMQTT/miniMQTT
+/usr/local/miniMQTT/mqtt/libmqtt.so
+/usr/local/miniMQTT/net/libnet.so
+/usr/local/miniMQTT/config/libconfig.so
+/usr/local/miniMQTT/utils/libiniparser.so
+/usr/local/miniMQTT/log/liblog.so
+/usr/local/miniMQTT/net/libcontrol.so
