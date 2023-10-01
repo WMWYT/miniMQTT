@@ -15,6 +15,8 @@ int mqtt_subscribe_encode(char ** topic, int * qos, int topic_size, int identifi
 
 char * mqtt_pingresp_encode();
 
-char * mqtt_suback_encode(int topic_size);
+char * mqtt_suback_encode(int i_M, int i_L, int topic_size, int * return_code);
+
+char * mqtt_unsuback_encode(int i_M, int i_L);
 
 #endif

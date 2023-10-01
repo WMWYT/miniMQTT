@@ -115,8 +115,18 @@ int control_connect(struct connect_packet * connect){
     return connect_call_back(connect);
 }
 
-int control_subscribe(struct subscribe_packet * subscribe){
-    return subscribe_call_back(subscribe);
+int * control_subscribe(struct subscribe_packet * subscribe){
+    int * return_code = (int *) malloc(subscribe->topic_size * sizeof(int));
+    memset(return_code, 0, sizeof * return_code);
+
+    for (int i = 0; i < subscribe->topic_size; i++){
+        if(subscribe_call_back(subscribe->payload[i].topic_filter->string) < 0)
+            return_code[i] = FAILURE;
+        else
+            return_code[i] = 0;
+    }
+    
+    return return_code;
 }
 
 int control_destroyed(){

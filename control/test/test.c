@@ -24,10 +24,22 @@ end:
     return CONNECT_ERROR_USER_OR_PASSWORD;
 }
 
+int subscribe_call_back(void * topic){
+    char * subscribe_topic = topic;
+
+    printf("subscribe_call_back: %s\n", subscribe_topic);
+
+    if(strcmp(subscribe_topic, "hai") != 0)
+        return -1;
+
+    return 0;
+}
+
 int broker_control_strat(void){
     int error = 0;
 
     error = control_register(connect_call_back, CONNECT);
+    error = control_register(subscribe_call_back, SUBSCRIBE);
 
     return error;
 }

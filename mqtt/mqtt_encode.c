@@ -294,9 +294,11 @@ char * suback_packet_to_hex(struct suback_packet packet){
     buff[2] = packet.variable_header.identifier_MSB;
     buff[3] = packet.variable_header.identifier_LSB;
 
-    for(int i = 4; i < 4 + packet.return_code_size; i++){
-        buff[i] = 0;
+    for(int i = 0; i < packet.return_code_size; i++){
+        buff[i + 4] = packet.return_codes[i];
     }
+
+    printf_buff("suback_packet", buff, packet.suback_header.remaining_length + 2);
 
     return buff;
 }
@@ -311,22 +313,29 @@ char * mqtt_pingresp_encode(){
     return buff;
 }
 
-char * mqtt_suback_encode(int topic_size){
+char * mqtt_suback_encode(int i_M, int i_L, int topic_size, int * return_code){
     struct suback_packet packet;
 
     packet.suback_header.control_packet_1 = 9;
     packet.suback_header.control_packet_2 = 0;
 
-    //TODO 当接收不到回包的时候自加
-    packet.variable_header.identifier_MSB = 0;
-    packet.variable_header.identifier_LSB = 1;
+    packet.variable_header.identifier_MSB = i_M;
+    packet.variable_header.identifier_LSB = i_L;
 
-    packet.return_codes = (unsigned char *) malloc(sizeof(unsigned char) * topic_size);
-    memset(packet.return_codes, 0, sizeof(unsigned char) * topic_size);
+    if(return_code == NULL){
+        packet.return_codes = (int *) malloc(sizeof(int) * topic_size);
+        memset(packet.return_codes, 0, sizeof(int) * topic_size);
 
-    //TODO 当不满足条件的时候为0x80,并且配合qos
+        //TODO 当不满足条件的时候为0x80,并且配合qos
+        for(int i = 0; i < topic_size; i++){
+            packet.return_codes[i] = 0;
+        }
+    }else{
+        packet.return_codes = return_code;
+    }
+
     for(int i = 0; i < topic_size; i++){
-        packet.return_codes[i] = 0;
+        printf("mqtt_suback_encode: %d\n", packet.return_codes[i]);
     }
 
     packet.return_code_size = topic_size;
@@ -336,3 +345,13 @@ char * mqtt_suback_encode(int topic_size){
     return suback_packet_to_hex(packet);
 }
 
+char * mqtt_unsuback_encode(int i_M, int i_L){
+    unsuback_packet packet;
+    packet.const_header.control_packet_1 = 11;
+    packet.const_header.control_packet_2 = 0;
+    packet.const_header.remaining_length = 2;
+    packet.variable_header.byte1 = i_M;
+    packet.variable_header.byte2 = i_L;
+
+    return const_packet_to_hex(packet);
+}

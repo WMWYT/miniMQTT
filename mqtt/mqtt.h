@@ -27,6 +27,13 @@ enum connect_return_codes{
     CONNECT_ERROR_AUTHORIZED
 };
 
+enum subscribe_return_codes{
+    QOS_0,
+    QOS_1,
+    QOS_2,
+    FAILURE = 0x80
+};
+
 enum sevice_error_code{
     TIME_OUT = 1,
 };
@@ -96,8 +103,7 @@ struct subscribe_packet{
 struct mqtt_const_packet{
     fixed_header const_header;
 
-    struct
-    {
+    struct{
         unsigned char byte1;
         unsigned char byte2;
     }variable_header;
@@ -111,7 +117,7 @@ struct suback_packet{
         unsigned char identifier_LSB;
     }variable_header;
 
-    unsigned char * return_codes;
+    int * return_codes;
     int return_code_size;
 };
 
@@ -157,6 +163,7 @@ typedef struct mqtt_const_packet puback_packet;
 typedef struct mqtt_const_packet pubrec_packet;
 typedef struct mqtt_const_packet pubrel_packet;
 typedef struct mqtt_const_packet pubcomp_packet;
+typedef struct mqtt_const_packet unsuback_packet;
 
 union mqtt_packet{
     struct connect_packet * connect;

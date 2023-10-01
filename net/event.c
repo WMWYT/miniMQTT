@@ -31,6 +31,7 @@ int event_handle(int * packet_len, char * buff, int fd){
     }
     
     if(mqtt_packet->connect->connect_header.control_packet_1 == CONNECT){
+        printf("packet connect\n");
         int error_code = mqtt_packet->connect->error_code;
 
         if(config->is_anonymously && error_code == CONNECT_ACCEPTED){
@@ -68,6 +69,7 @@ int event_handle(int * packet_len, char * buff, int fd){
     }
 
     if(mqtt_packet->publish->publish_header.control_packet_1 == PUBLISH){
+        printf("packet publish\n");
         UT_array * publish_client_id;
         char ** p = NULL;
 
@@ -100,10 +102,20 @@ int event_handle(int * packet_len, char * buff, int fd){
     }
 
     if(mqtt_packet->subscribe->subscribe_header.control_packet_1 == SUBSCRIBE){
-        if(config->is_anonymously)
-            control_subscribe(mqtt_packet->subscribe);
+        printf("packet subscribe\n");
+        int * return_code = NULL;
 
-        write(fd, mqtt_suback_encode(mqtt_packet->subscribe->topic_size), mqtt_packet->subscribe->topic_size + 4);
+        if(config->is_anonymously){
+            return_code = control_subscribe(mqtt_packet->subscribe);
+            for(int i = 0; i < mqtt_packet->subscribe->topic_size; i++){
+                printf("subscribe code: %d\n", return_code[i]);
+            }
+        }
+
+        write(fd, mqtt_suback_encode(mqtt_packet->subscribe->variable_header.identifier_MSB, \
+                                    mqtt_packet->subscribe->variable_header.identifier_LSB, \
+                                    mqtt_packet->subscribe->topic_size, return_code), \
+            mqtt_packet->subscribe->topic_size + 4);
         for(int i = 0; i < mqtt_packet->subscribe->topic_size; i++){
             session_subscribe_topic(mqtt_packet->subscribe->payload[i].topic_filter->string, s);
             session_topic_subscribe(mqtt_packet->subscribe->payload[i].topic_filter->string, s->client_id);
@@ -111,10 +123,13 @@ int event_handle(int * packet_len, char * buff, int fd){
     }
 
     if(mqtt_packet->unsubscribe->unsubscribe_header.control_packet_1 == UNSUBSCRIBE){
+        printf("packet unsubscribe\n");
         for(int i  = 0; i < mqtt_packet->unsubscribe->un_topic_size; i++){
             session_unsubscribe_topic(mqtt_packet->unsubscribe->payload[i]->string, s);
             session_topic_unsubscribe(mqtt_packet->unsubscribe->payload[i]->string, s->client_id);
         }
+
+        write(fd, mqtt_unsuback_encode(mqtt_packet->unsubscribe->variable_header.identifier_MSB,mqtt_packet->unsubscribe->variable_header.identifier_LSB), 4);
     }
 
     if(mqtt_packet->pingreq->pingreq_header.control_packet_1 == PINGREQ){
