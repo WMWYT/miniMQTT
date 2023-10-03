@@ -38,11 +38,9 @@ int event_handle(int * packet_len, char * buff, int fd){
             error_code = control_connect(mqtt_packet->connect);
         }
 
-        send(fd, mqtt_connack_encode(!(mqtt_packet->connect->variable_header.connect_flags >> 1), error_code), 4, 0);
-
         if(error_code == CONNECT_ACCEPTED){
-            if((session_flag = session_init(fd, mqtt_packet->connect->payload.client_id->string)) != NULL){
-                //TODO 实现遗嘱消息
+            //是否保存了session
+            if((session_flag = session_init(fd, mqtt_packet->connect->payload.client_id->string, (mqtt_packet->connect->variable_header.connect_flags >> 1))) != NULL){
                 if(mqtt_packet->connect->variable_header.connect_flags >> 2 & 1){
                     session_add_will_topic(mqtt_packet->connect->payload.will_topic->string, session_flag);
                     session_add_will_playload(mqtt_packet->connect->payload.will_playload->string, session_flag);
@@ -51,14 +49,23 @@ int event_handle(int * packet_len, char * buff, int fd){
                 if(session_flag->sock != fd){
                     int tmp = session_flag->sock;
                     session_flag->sock = fd;
+                    send(fd, mqtt_connack_encode(!(mqtt_packet->connect->variable_header.connect_flags >> 1), \
+                                                CONNECT_ACCEPTED), \
+                         4, 0);
                     return tmp; //大于0 断开之前会话client_id相同的sock
                 }
 
+                send(fd, mqtt_connack_encode(!(mqtt_packet->connect->variable_header.connect_flags >> 1), \
+                                             CONNECT_ACCEPTED), \
+                     4, 0);
                 return 0;
             }else{
                 printf("Repeat connect\n");
+                send(fd, mqtt_connack_encode(0, CONNECT_ACCEPTED), 4, 0);
                 if(s) session_close(s);
             }
+        }else{
+            send(fd, mqtt_connack_encode(0, error_code), 4, 0);
         }
 
         return -1;
@@ -116,9 +123,12 @@ int event_handle(int * packet_len, char * buff, int fd){
                                     mqtt_packet->subscribe->variable_header.identifier_LSB, \
                                     mqtt_packet->subscribe->topic_size, return_code), \
             mqtt_packet->subscribe->topic_size + 4);
+
         for(int i = 0; i < mqtt_packet->subscribe->topic_size; i++){
-            session_subscribe_topic(mqtt_packet->subscribe->payload[i].topic_filter->string, s);
-            session_topic_subscribe(mqtt_packet->subscribe->payload[i].topic_filter->string, s->client_id);
+            if(return_code == NULL || return_code[i] != 0x80){
+                session_subscribe_topic(mqtt_packet->subscribe->payload[i].topic_filter->string, s);
+                session_topic_subscribe(mqtt_packet->subscribe->payload[i].topic_filter->string, s->client_id);
+            }
         }
     }
 

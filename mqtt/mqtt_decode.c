@@ -89,7 +89,6 @@ struct connect_packet *mqtt_connect_packet_create(struct fixed_header header, un
     packet->variable_header.keep_alive_MSB = *buff++;
     packet->variable_header.keep_alive_LSB = *buff++;
 
-    
     packet->payload.client_id = hex_to_string(buff);
     buff += packet->payload.client_id->string_len + 2;
 

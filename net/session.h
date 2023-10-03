@@ -11,6 +11,7 @@ struct session {
     char client_id[64];
     
     //info
+    int clean_session;
     char * will_topic;
     char * will_playload;
     UT_array * topic;
@@ -19,7 +20,7 @@ struct session {
     UT_hash_handle hh2;
 };
 
-struct session * session_init(int s_sock, char * s_client_id);
+struct session * session_init(int s_sock, char * s_client_id, int clean_session);
 void session_add_will_topic(char * s_will_topic, struct session *s);
 void session_add_will_playload(char * s_will_playload, struct session * s);
 void session_subscribe_topic(char * s_topic, struct session *s);

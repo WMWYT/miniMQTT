@@ -68,7 +68,7 @@ void session_delete(struct session * s){
         free(s);
 }
 
-struct session * session_init(int s_sock, char * s_client_id){
+struct session * session_init(int s_sock, char * s_client_id, int clean_session){
     struct session * s;
     char * client_id;
     int tmp = 0;
@@ -86,7 +86,8 @@ struct session * session_init(int s_sock, char * s_client_id){
             //TODO 这里的clean session都为1，之后把他修改为0也可以使用
             tmp = s->sock;
             utarray_free(s->topic);
-            memset(s->will_topic, 0, sizeof(s->will_topic));
+            if(s->will_topic) free(s->will_topic);
+            if(s->will_topic) free(s->will_playload);
             HASH_DELETE(hh1, session_sock, s);
             HASH_DELETE(hh2, session_client_id, s);
 
@@ -95,6 +96,7 @@ struct session * session_init(int s_sock, char * s_client_id){
             s->sock = tmp;
             strcpy(s->client_id, s_client_id);
             utarray_new(s->topic, &ut_str_icd);
+            s->clean_session = clean_session;
 
             HASH_ADD(hh1, session_sock, sock, sizeof(int), s);
             HASH_ADD(hh2, session_client_id, client_id, strlen(s->client_id), s);
@@ -112,6 +114,7 @@ struct session * session_init(int s_sock, char * s_client_id){
         s->sock = s_sock;
         strcpy(s->client_id, s_client_id);
         utarray_new(s->topic, &ut_str_icd);
+        s->clean_session = clean_session;
 
         HASH_ADD(hh1, session_sock, sock, sizeof(int), s);
         HASH_ADD(hh2, session_client_id, client_id, strlen(s->client_id), s);

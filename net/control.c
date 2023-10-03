@@ -100,7 +100,7 @@ void system_info_update(void * info, int change){
             }
             break;
         default:
-            printf("not have this change [%d]\n", change);
+            printf("not have change [%d]\n", change);
             return;
     }
 
@@ -112,12 +112,18 @@ void session_info_delete(){
 }
 
 int control_connect(struct connect_packet * connect){
-    return connect_call_back(connect);
+    if(connect_call_back != NULL)
+        return connect_call_back(connect);
+    else
+        return 0;
 }
 
 int * control_subscribe(struct subscribe_packet * subscribe){
     int * return_code = (int *) malloc(subscribe->topic_size * sizeof(int));
     memset(return_code, 0, sizeof * return_code);
+
+    if(subscribe_call_back == NULL)
+        goto end;
 
     for (int i = 0; i < subscribe->topic_size; i++){
         if(subscribe_call_back(subscribe->payload[i].topic_filter->string) < 0)
@@ -126,6 +132,7 @@ int * control_subscribe(struct subscribe_packet * subscribe){
             return_code[i] = 0;
     }
     
+end:
     return return_code;
 }
 
