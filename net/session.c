@@ -13,6 +13,7 @@ extern struct SYSNode sys;
 struct session_info * session_info;
 struct session *session_sock;
 struct session *session_client_id;
+struct session_publish * session_publish;
 
 char * get_rand_str(int num){
     int randomData = 0;
@@ -48,42 +49,14 @@ char * get_rand_str(int num){
 }
 
 /**************session***************/
-void session_delete(struct session * s){
-    char **p = NULL;
-
-    if(utarray_front(s->topic)){
-        while(p = (char **)utarray_next(s->topic, p)){
-            session_topic_unsubscribe(*p, s->client_id);
-        }
-
-        if(utarray_front(s->topic) != NULL){
-            utarray_free(s->topic);
-        }
-    }
-
-    HASH_DELETE(hh1, session_sock, s);
-    HASH_DELETE(hh2, session_client_id, s);
-
-    if(s)
-        free(s);
-}
-
 struct session * session_init(int s_sock, char * s_client_id, int clean_session){
-    struct session * s;
+    struct session * s = NULL;
     char * client_id;
     int tmp = 0;
-    
-    HASH_FIND(hh1, session_sock, &s_sock, sizeof(int), s);
-
-    if (s){
-        session_delete(s);
-        return NULL;
-    }
 
     if(s_client_id != NULL){
         HASH_FIND(hh2, session_client_id, s_client_id, strlen(s_client_id), s);
         if (s){
-            //TODO 这里的clean session都为1，之后把他修改为0也可以使用
             tmp = s->sock;
             utarray_free(s->topic);
             if(s->will_topic) free(s->will_topic);
@@ -126,12 +99,31 @@ struct session * session_init(int s_sock, char * s_client_id, int clean_session)
     return s;
 }
 
-void session_add_will_topic(char * s_will_topic, struct session *s){
+void session_delete(struct session * s){
+    if(s->clean_session){
+        char **p = NULL;
+
+        if(utarray_front(s->topic)){
+            while(p = (char **)utarray_next(s->topic, p)){
+                session_topic_unsubscribe(*p, s->client_id);
+            }
+        }
+
+        HASH_DELETE(hh1, session_sock, s);
+        HASH_DELETE(hh2, session_client_id, s);
+
+        if(s)
+            free(s);
+    }
+}
+
+void session_add_will_topic(char * s_will_topic, int qos, struct session *s){
     if(s->will_topic == NULL){
         s->will_topic = (char *) malloc(sizeof(char) * (strlen(s_will_topic) + 1));
         memset(s->will_topic, 0, sizeof(char) * (strlen(s_will_topic) + 1));
     }
 
+    s->will_qos = qos;
     memmove(s->will_topic, s_will_topic, strlen(s_will_topic));
 }
 
@@ -202,17 +194,17 @@ void publish_will_message(struct session * s){
     struct session * will_s;
     UT_array * will_client_id;
     int buff_size = 0;
-    char playload[10] = {0};
-    char buff[255] = {0};
+    char buff[65535] = {0};
     char ** p = NULL;
 
     will_client_id = session_topic_search(s->will_topic);
     if(will_client_id != NULL){
         if(utarray_front(will_client_id) != NULL){
-            buff_size = mqtt_publish_encode(s->will_topic, s->will_playload, buff);
             while((p = (char **) utarray_next(will_client_id, p))){
                 HASH_FIND(hh2, session_client_id, *p, strlen(*p), will_s);
+                buff_size = mqtt_publish_encode(s->will_topic, s->will_playload, buff);
                 write(will_s->sock, buff, buff_size);
+                memset(buff, 0, buff_size);
             }
         }
     }
@@ -303,4 +295,51 @@ void session_topic_printf_all(){
     printf_all(root.children);
 
     printf("____________________________________\n");
+}
+
+/*****************sessiong publish*****************/
+void session_publish_add(char * client_id, int topic_len, char * topic, int playload_len, char * playload){
+    struct session_publish * s;
+
+    s = (struct session_publish *) malloc(sizeof * s);
+    memset(s, 0, sizeof * s);
+    strcpy(s->client_id, client_id);
+
+    s->topic = (char *) malloc(sizeof(char) * topic_len);
+    memset(s->topic, 0, topic_len);
+    strcpy(s->topic, topic);
+
+    s->playload = (char *) malloc(sizeof(char) * playload_len);
+    memset(s->playload, 0, playload_len);
+    strcpy(s->playload, playload);
+
+    HASH_ADD_STR(session_publish, client_id, s);
+}
+
+void session_publish_delete(char * client_id){
+    struct session_publish * s;
+
+    HASH_FIND_STR(session_publish, client_id, s);
+
+    HASH_DEL(session_publish, s);
+    free(s);
+}
+
+void session_publish_delete_all(){
+    struct session_publish *current;
+    struct session_publish *tmp;
+
+    HASH_ITER(hh, session_publish, current, tmp) {
+      HASH_DEL(session_publish, current);
+    }
+}
+
+void session_publish_printf_all(){
+    struct session_publish *current;
+    struct session_publish *tmp;
+    char **p = NULL;
+
+    HASH_ITER(hh, session_publish, current, tmp){
+        printf("publish client id %s: topic %s playload %s\n", current->client_id, current->topic, current->playload);
+    }
 }

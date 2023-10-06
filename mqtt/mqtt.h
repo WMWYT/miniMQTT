@@ -134,6 +134,7 @@ struct publish_packet{
         unsigned char identifier_LSB;
     }variable_header;
 
+    int playload_len;
     unsigned char * payload;
 };
 

@@ -28,8 +28,9 @@ void client_close(int fd){
     epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
     close(fd);
     printf("close socke %d\n", fd);
-    //session_printf_all();
+    // session_printf_all();
     // session_topic_printf_all();
+    session_publish_printf_all();
     printf("-----------------------------------\n");
 }
 
@@ -70,7 +71,7 @@ void net_start(){
     int port = config->port;
 
     server_sock = socket(PF_INET, SOCK_STREAM, 0);
-    
+
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -82,9 +83,9 @@ void net_start(){
         if(control_init(config->dir, config->control_type) == -1){
             error_exit("control error");
         }
-    
+
     system_info_init();
-    
+
     if(bind(server_sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1){
         error_exit("bind error");
     }

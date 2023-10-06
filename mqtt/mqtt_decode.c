@@ -194,6 +194,7 @@ struct publish_packet * mqtt_publish_packet_create(struct fixed_header header, u
     packet->payload = (unsigned char *) malloc(str_len);
     memset(packet->payload, 0, str_len);
     memcpy(packet->payload, buff, str_len);
+    packet->playload_len = str_len;
 
     return packet;
 }
