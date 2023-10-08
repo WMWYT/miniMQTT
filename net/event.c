@@ -5,9 +5,11 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include "filtering.h"
 #include "event.h"
 #include "session.h"
 #include "control.h"
+#include "../log/log.h"
 #include "../mqtt/mqtt_decode.h"
 #include "../mqtt/mqtt_encode.h"
 #include "../mqtt/mqtt.h"
@@ -21,7 +23,6 @@ int event_handle(int * packet_len, char * buff, int fd){
     struct session_topic * st;
     struct session * session_flag;
     
-    //TODO 这里的qos>0只是能实现消息分发，没有qos>0的特性
     HASH_FIND(hh1, session_sock, &fd, sizeof(int), s);
     mqtt_packet = mqtt_pack_decode(buff, packet_len);
 
@@ -40,10 +41,12 @@ int event_handle(int * packet_len, char * buff, int fd){
 
         if(error_code == CONNECT_ACCEPTED){
             session_flag = session_init(fd, mqtt_packet->connect->payload.client_id->string, (mqtt_packet->connect->variable_header.connect_flags >> 1));
+            
+            //printf("connect_flag:%d\n", (mqtt_packet->connect->variable_header.connect_flags >> 4 & 1) * 2 + (mqtt_packet->connect->variable_header.connect_flags >> 3 & 1));
 
             if(mqtt_packet->connect->variable_header.connect_flags >> 2 & 1){
                 session_add_will_topic(mqtt_packet->connect->payload.will_topic->string, \
-                (mqtt_packet->connect->variable_header.connect_flags >> 4 * 2 + mqtt_packet->connect->variable_header.connect_flags >> 4 * 1), \
+                ((mqtt_packet->connect->variable_header.connect_flags >> 4 & 1) * 2 + (mqtt_packet->connect->variable_header.connect_flags >> 3 & 1)), \
                 session_flag);
                 session_add_will_playload(mqtt_packet->connect->payload.will_playload->string, session_flag);
             }
@@ -78,31 +81,34 @@ int event_handle(int * packet_len, char * buff, int fd){
     if(mqtt_packet->publish->publish_header.control_packet_1 == PUBLISH){
         printf("packet publish\n");
         UT_array * publish_client_id;
-        char ** p = NULL;
+        ChilderNode * p = NULL;
+        int buff_size = 0;
+        char publish_buff[65535] = {0};
 
         publish_client_id = session_topic_search(mqtt_packet->publish->variable_header.topic_name->string);
 
         printf("dup: %d qos: %d, retain: %d\n", mqtt_packet->publish->dup, mqtt_packet->publish->qos, mqtt_packet->publish->retain);
 
         if(publish_client_id != NULL){
-            while((p = (char **) utarray_next(publish_client_id, p))){
-                HASH_FIND(hh2, session_client_id, *p, strlen(*p), s);
+            while((p = (ChilderNode *) utarray_next(publish_client_id, p))){
+                HASH_FIND(hh2, session_client_id, p->client_id, strlen(p->client_id), s);
 
-                //存储消息
+                //TODO 存储合理的QOS1,2消息
                 // if(){
                 //     session_publish_add(*p, mqtt_packet->publish->variable_header.topic_name->string_len, \
                 //                         mqtt_packet->publish->variable_header.topic_name->string, \
                 //                         mqtt_packet->publish->playload_len, mqtt_packet->publish->payload);
                 //     session_publish_printf_all();
                 // }
+                
+                buff_size = mqtt_publish_encode(mqtt_packet->publish->variable_header.topic_name->string, \
+                                                p->max_qos, mqtt_packet->publish->payload, publish_buff);
 
-                //write(s->sock, mqtt_publish_encode(), );
-                write(s->sock, buff, mqtt_packet->publish->publish_header.remaining_length + 2);
+                write(s->sock, publish_buff, buff_size);
             }
         }
 
         //TODO 这里在服务器给客户端推送消息的时候没有考虑客户端订阅时所允许的最大qos
-        //TODO 这里其实并未实现clean session为0时的信息存储
         //TODO 没有实现qos1，2的全功能
 
         if(mqtt_packet->publish->qos == 1){
@@ -157,7 +163,9 @@ int event_handle(int * packet_len, char * buff, int fd){
         for(int i = 0; i < mqtt_packet->subscribe->topic_size; i++){
             if(return_code == NULL || return_code[i] != 0x80){
                 session_subscribe_topic(mqtt_packet->subscribe->payload[i].topic_filter->string, s);
-                session_topic_subscribe(mqtt_packet->subscribe->payload[i].topic_filter->string, s->client_id);
+                session_topic_subscribe(mqtt_packet->subscribe->payload[i].topic_filter->string, \
+                                        mqtt_packet->subscribe->payload[i].qos, \
+                                        s->client_id);
             }
         }
     }
@@ -177,7 +185,6 @@ int event_handle(int * packet_len, char * buff, int fd){
     }
 
     if(mqtt_packet->disconnect->disconnect_header.control_packet_1 == DISCONNECT){
-        //TODO 这里只是clean session 为1清除会话的时候，之后将为0的放上去
         session_close(s);
         return -1;// 小于0 客户端断开链接， 要断开链接不发送
     }

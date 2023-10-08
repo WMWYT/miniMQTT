@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <unistd.h>
+#include "../../net/filtering.h"
 #include "../../utils/uthash/utarray.h"
 #include "../../mqtt/mqtt.h"
 #include "../../mqtt/mqtt_encode.h"
@@ -25,7 +26,7 @@ int system_call_back(void * system_date){
     int buff_size = 0;
     char playload[10] = {0};
     char buff[255] = {0};
-    char ** p = NULL;
+    ChilderNode * p = NULL;
 
     // version_client_id = session_topic_search("$SYS/broker/version");
     // time_client_id = session_topic_search("$SYS/broker/time");
@@ -35,9 +36,11 @@ int system_call_back(void * system_date){
             active_client_id = session_topic_search("$SYS/broker/active");
             if(utarray_front(active_client_id) != NULL){
                 sprintf(playload, "%d", info->active);
-                buff_size = mqtt_publish_encode("$SYS/broker/active", playload, buff);
-                while((p = (char **) utarray_next(active_client_id, p))){
-                    HASH_FIND(hh2, session_client_id, *p, strlen(*p), s);
+                while((p = (ChilderNode *) utarray_next(active_client_id, p))){
+                    printf("system_call_back:%s\n", p->client_id);
+                    buff_size = mqtt_publish_encode("$SYS/broker/active", p->max_qos, playload, buff);
+                    HASH_FIND(hh2, session_client_id, p->client_id, strlen(p->client_id), s);
+                    memset(buff, 0, buff_size);
                     write(s->sock, buff, buff_size);
                 }
             }

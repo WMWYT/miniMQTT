@@ -13,10 +13,10 @@ UT_icd node_icd = {sizeof(struct TrieNode), NULL, NULL, NULL};
     int flag = 0;                           \
     if((B)->children != NULL) flag = 1;     \
     if((B)->plus_children != NULL) flag =1; \
-    if((B)->client_id != NULL)              \
-        if(utarray_front((B)->client_id) != NULL) flag = 1;\
-    if((B)->PoundNode.client_id != NULL)    \
-        if(utarray_front((B)->PoundNode.client_id) != NULL) flag = 1;\
+    if((B)->childer_node != NULL)              \
+        if(utarray_front((B)->childer_node) != NULL) flag = 1;\
+    if((B)->PoundNode.childer_node != NULL)    \
+        if(utarray_front((B)->PoundNode.childer_node) != NULL) flag = 1;\
     if(flag == 0)                           \
         if(!strcmp((B)->key, "+"))          \
             HASH_DEL((A)->plus_children, B);\
@@ -32,16 +32,44 @@ int intsort(const void *a, const void *b){
 int strsort(const void *_a, const void *_b){
     const char *a = *(const char* const *)_a;
     const char *b = *(const char* const *)_b;
+
     return strcmp(a,b);
 }
 
-void deduplication(UT_array * array){
-    char ** p = NULL;
-    char ** tmp = NULL;
-    utarray_sort(array, strsort);
+int struct_str_sort(const void * _b, const void * _a){
+    const ChilderNode *a = (const ChilderNode *) _a;
+    const char *b = (const char *) _b;
 
-    for(int i = 0; (p=(char**)utarray_next(array,tmp)); i++) {
-        if(tmp && !strcmp(*p, *tmp)){
+    return strcmp(a->client_id, b);
+}
+
+int structsort(const void * _a, const void * _b){
+    const ChilderNode * a = (const ChilderNode *) _a;
+    const ChilderNode * b = (const ChilderNode *) _b;
+
+    return strcmp(a->client_id, b->client_id);
+}
+
+void childer_node_copy(void *_dst, const void *_src) {
+  ChilderNode *dst = (ChilderNode*)_dst, *src = (ChilderNode*)_src;
+  dst->max_qos = src->max_qos;
+  dst->client_id = src->client_id ? strdup(src->client_id) : NULL;
+}
+
+void childer_node_dtor(void *_elt) {
+  ChilderNode *elt = (ChilderNode*)_elt;
+  if (elt->client_id) free(elt->client_id);
+}
+
+UT_icd childer_node_icd = {sizeof(ChilderNode), NULL, childer_node_copy, childer_node_dtor};
+
+void deduplication(UT_array * array){
+    ChilderNode * p = NULL;
+    ChilderNode * tmp = NULL;
+    utarray_sort(array, structsort);
+
+    for(int i = 0; (p = (ChilderNode*) utarray_next(array, tmp)); i++) {
+        if(tmp && !strcmp(p->client_id, tmp->client_id)){
             utarray_erase(array, i, 1);
         }else{
             tmp = p;
@@ -58,7 +86,7 @@ struct TrieNode * initNode(char * key){
         pCrawl = (struct TrieNode *) malloc(sizeof(struct TrieNode));
         memset(pCrawl, 0, sizeof * pCrawl);
         pCrawl->key = key;
-        pCrawl->client_id = NULL;
+        pCrawl->childer_node = NULL;
         HASH_ADD_STR(root.children, key, pCrawl);
     }
 
@@ -74,7 +102,7 @@ struct TrieNode * initSYSNode(char * key){
         pCrawl = (struct TrieNode *) malloc(sizeof(struct TrieNode));
         memset(pCrawl, 0, sizeof * pCrawl);
         pCrawl->key = key;
-        pCrawl->client_id = NULL;
+        pCrawl->childer_node = NULL;
         HASH_ADD_STR(sys.children, key, pCrawl);
     }
 
@@ -89,7 +117,7 @@ struct TrieNode * initPlusNode(){
         pCrawl = (struct TrieNode *) malloc(sizeof(struct TrieNode));
         memset(pCrawl, 0, sizeof * pCrawl);
         pCrawl->key = "+";
-        pCrawl->client_id = NULL;
+        pCrawl->childer_node = NULL;
         HASH_ADD_STR(root.plus_children, key, pCrawl);
     }
 
@@ -104,7 +132,7 @@ struct TrieNode * insert(struct TrieNode * s_root, char * key){
         tmpCrawl = (struct TrieNode *) malloc(sizeof(struct TrieNode));
         memset(tmpCrawl, 0, sizeof * tmpCrawl);
         tmpCrawl->key = key;
-        tmpCrawl->client_id = NULL;
+        tmpCrawl->childer_node = NULL;
         HASH_ADD_STR(s_root->children, key, tmpCrawl);
     }
 
@@ -119,25 +147,31 @@ struct TrieNode * insertPlus(struct TrieNode * s_root, char * key){
         tmpCrawl = (struct TrieNode *) malloc(sizeof(struct TrieNode));
         memset(tmpCrawl, 0, sizeof * tmpCrawl);
         tmpCrawl->key = key;
-        tmpCrawl->client_id = NULL;
+        tmpCrawl->childer_node = NULL;
         HASH_ADD_STR(s_root->plus_children, key, tmpCrawl);
     }
 
     return tmpCrawl;
 }
 
-void intercept(char * key, char * client_id){
+void intercept(char * key, int max_qos, char * client_id){
     struct TrieNode *pCrawl;
+    ChilderNode * ic = (ChilderNode *) malloc(sizeof(ChilderNode));
     char * tmp_str;
     int tmp_int = 0;
     int i = 0;
 
-    if(key[0] == '#'){
-        if(root.client_id == NULL)
-            utarray_new(root.client_id, &ut_str_icd);
+    ic->max_qos = max_qos;
+    ic->client_id = (char *) malloc(sizeof(char) * (strlen(client_id) + 1));
+    memset(ic->client_id, 0, sizeof(char) * (strlen(client_id) + 1));
+    strcpy(ic->client_id, client_id);
 
-        utarray_push_back(root.client_id, &client_id);
-        deduplication(root.client_id);
+    if(key[0] == '#'){
+        if(root.childer_node == NULL)
+            utarray_new(root.childer_node, &childer_node_icd);
+
+        utarray_push_back(root.childer_node, ic);
+        deduplication(root.childer_node);
         return;
     }else if(key[0] == '+'){
         pCrawl = initPlusNode();
@@ -197,18 +231,18 @@ void intercept(char * key, char * client_id){
     goto end;
 
 pound:
-    if(pCrawl->PoundNode.client_id == NULL)
-        utarray_new(pCrawl->PoundNode.client_id, &ut_str_icd);
+    if(pCrawl->PoundNode.childer_node == NULL)
+        utarray_new(pCrawl->PoundNode.childer_node, &ut_str_icd);
 
-    utarray_push_back(pCrawl->PoundNode.client_id, &client_id);
-    deduplication(pCrawl->PoundNode.client_id);
+    utarray_push_back(pCrawl->PoundNode.childer_node, &client_id);
+    deduplication(pCrawl->PoundNode.childer_node);
 
 end:
-    if(pCrawl->client_id == NULL)
-        utarray_new(pCrawl->client_id, &ut_str_icd);
+    if(pCrawl->childer_node == NULL)
+        utarray_new(pCrawl->childer_node, &childer_node_icd);
     
-    utarray_push_back(pCrawl->client_id, &client_id);
-    deduplication(pCrawl->client_id);
+    utarray_push_back(pCrawl->childer_node, ic);
+    deduplication(pCrawl->childer_node);
 }
 
 UT_array * array_hand(UT_array * array, char * key){
@@ -217,7 +251,7 @@ UT_array * array_hand(UT_array * array, char * key){
     UT_array * pound_array = NULL;
     UT_array * ans_array = NULL;
 
-    utarray_new(pound_array, &ut_str_icd);
+    utarray_new(pound_array, &childer_node_icd);
     utarray_new(ans_array, &node_icd);
 
     for(int i = 0; (p = (struct TrieNode *) utarray_next(array, p)); i++){
@@ -226,8 +260,8 @@ UT_array * array_hand(UT_array * array, char * key){
         if(p->plus_children != NULL)
             utarray_push_back(ans_array, p->plus_children);
 
-        if(p->PoundNode.client_id != NULL)
-            utarray_concat(pound_array, p->PoundNode.client_id);
+        if(p->PoundNode.childer_node != NULL)
+            utarray_concat(pound_array, p->PoundNode.childer_node);
 
         if(tmpCrawl != NULL){
             utarray_push_back(ans_array, tmpCrawl);
@@ -248,17 +282,17 @@ UT_array * search(char * key){
     struct TrieNode *tmpCrawl = NULL;
     struct TrieNode * p = NULL;
     
-    char ** test = NULL;
+    ChilderNode * test = NULL;
     char * tmp_str = NULL;
     int tmp_int = 0;
     int i = 0;
 
-    utarray_new(tmp_array, &ut_str_icd);
+    utarray_new(tmp_array, &childer_node_icd);
     utarray_new(pCrawl, &node_icd);
 
-    if(root.client_id != NULL)
-        if(utarray_front(root.client_id) != NULL){
-            utarray_concat(tmp_array, root.client_id);
+    if(root.childer_node != NULL && key[0] != '$')
+        if(utarray_front(root.childer_node) != NULL){
+            utarray_concat(tmp_array, root.childer_node);
         }
 
     if(key[0] == '/'){
@@ -314,8 +348,12 @@ UT_array * search(char * key){
     }
 
     while((p = (struct TrieNode *) utarray_next(pCrawl, p))){
-        if(p->client_id != NULL)
-            utarray_concat(tmp_array, p->client_id);
+        if(p->childer_node != NULL){
+            while((test = (ChilderNode *) utarray_next(p->childer_node, test))){
+                printf("tmp_array:%s\n", test->client_id);
+            }
+            utarray_concat(tmp_array, p->childer_node);
+        }
     }
 
     deduplication(tmp_array);
@@ -324,10 +362,10 @@ UT_array * search(char * key){
 }
 
 void delete_client_id(UT_array * array, char * client_id){
-    char **first, **find;
+    ChilderNode *first, *find;
     long int pos = 0;
 
-    if((find = utarray_find(array, &client_id, strsort)) != NULL){
+    if((find = utarray_find(array, client_id, struct_str_sort)) != NULL){
         first = utarray_front(array);
         pos = find - first;
 
@@ -339,13 +377,11 @@ void delete_node(struct TrieNode * node, char * key, char * client_id){
     struct TrieNode * out_node = NULL;
     int key_len = strlen(key);
     int tmp_int = 0;
-    char ** p = NULL;
     char * tmp_str;
-    char * dest_str;
     int i = 0;
 
     if(key_len <= 0){
-        delete_client_id(node->client_id, client_id);
+        delete_client_id(node->childer_node, client_id);
     }
 
     if(key[0] == '/'){
@@ -370,8 +406,8 @@ void delete_node(struct TrieNode * node, char * key, char * client_id){
         strncpy(tmp_str, &key[tmp_int], i - tmp_int + 1);
 
         if(!strcmp(tmp_str, "#")){
-            delete_client_id(node->PoundNode.client_id, client_id);
-            delete_client_id(node->client_id, client_id);
+            delete_client_id(node->PoundNode.childer_node, client_id);
+            delete_client_id(node->childer_node, client_id);
             return;
         }else if(!strcmp(tmp_str, "+")){
             HASH_FIND_STR(node->plus_children, "+", out_node);
@@ -397,17 +433,18 @@ void delete_topic(char * key, char * client_id){
     struct TrieNode * node = NULL;
 
     char * tmp_str = NULL;
-    char **first, **find;
+    // char **first, **find;
+    ChilderNode * first, * find;
     int key_len = strlen(key);
     int i = 0;
     long int pos = 0;
 
     if(key[0] == '#'){
-        if((find = utarray_find(root.client_id, &client_id, strsort)) != NULL){
-            first = utarray_front(root.client_id);
+        if((find = utarray_find(root.childer_node, client_id, struct_str_sort)) != NULL){
+            first = utarray_front(root.childer_node);
             pos = find - first;
 
-            utarray_erase(root.client_id, pos, 1);
+            utarray_erase(root.childer_node, pos, 1);
         }
 
         return;
@@ -465,12 +502,12 @@ void delete_all(struct TrieNode * node){
     }
 
     HASH_ITER(hh, node, current_user, tmp){
-        if(current_user->client_id != NULL){
-            utarray_clear(current_user->client_id);
+        if(current_user->childer_node != NULL){
+            utarray_clear(current_user->childer_node);
         }
 
-        if(current_user->PoundNode.client_id != NULL){
-            utarray_clear(current_user->client_id);
+        if(current_user->PoundNode.childer_node != NULL){
+            utarray_clear(current_user->childer_node);
         }
 
         if(current_user->plus_children != NULL){
@@ -485,18 +522,19 @@ void delete_all(struct TrieNode * node){
 
 void printf_all(struct TrieNode * s_root){
     struct TrieNode *current_user, *tmp;
-    char **p1 = NULL;
-    char **p2 = NULL;
+    ChilderNode *p1 = NULL;
+    ChilderNode *p2 = NULL;
 
     if(s_root == NULL){
         return;
     }
 
     HASH_ITER(hh, s_root, current_user, tmp){
-        if(current_user->client_id != NULL){
+        if(current_user->childer_node != NULL){
             printf("%s ", current_user->key);
-            while((p1=(char**)utarray_next(current_user->client_id,p1))){
-                printf("%s ", *p1);
+            while((p1=(ChilderNode*) utarray_next(current_user->childer_node,p1))){
+                printf("client_id:%s ", p1->client_id);
+                printf("max_qos:%d ", p1->max_qos);
             }
 
             printf("\n");
@@ -504,11 +542,12 @@ void printf_all(struct TrieNode * s_root){
             printf("%s ", current_user->key);
         }
 
-        if(current_user->PoundNode.client_id != NULL){
+        if(current_user->PoundNode.childer_node != NULL){
             printf("---------------pound------------\n");
             printf("%s ", current_user->key);
-            while((p2=(char**)utarray_next(current_user->PoundNode.client_id, p2))){
-                printf("%s ", *p2);
+            while((p2=(ChilderNode *)utarray_next(current_user->PoundNode.childer_node, p2))){
+                printf("client_id:%s ", p2->client_id);
+                printf("max_qos:%d", p2->max_qos);
             }
             printf("\n");
         }

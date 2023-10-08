@@ -9,7 +9,7 @@
 struct session {
     int sock;
     char client_id[64];
-    
+
     //info
     int clean_session;
     int will_qos;
@@ -30,6 +30,7 @@ struct session_publish{
     UT_hash_handle hh;
 };
 
+//TODO 存储报文标识符
 static char session_packet_identifier[65536];
 
 struct session * session_init(int s_sock, char * s_client_id, int clean_session);
@@ -42,7 +43,7 @@ void session_delete(struct session * s);
 void session_delete_all();
 void session_close(struct session *s);
 
-void session_topic_subscribe(char * s_topic, char * s_client_id);
+void session_topic_subscribe(char * s_topic, int max_qos, char * s_client_id);
 void session_topic_unsubscribe(char * topic, char * client_id);
 void session_topic_delete_all();
 UT_array * session_topic_search(char * topic);

@@ -56,7 +56,7 @@ int test_connect_packet(unsigned char * buff){
 }
 
 int test_publish_packet(unsigned char * buff){
-    return mqtt_publish_encode("hai", "hello world!", buff);
+    return mqtt_publish_encode("hai", 0,"hello world!", buff);
 }
 
 int test_subscribe_packet(unsigned char * buff){

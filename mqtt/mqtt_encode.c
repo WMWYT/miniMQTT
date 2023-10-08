@@ -209,10 +209,10 @@ char * publish_packet_to_hex(struct publish_packet packet){
     return flag;
 }
 
-int mqtt_publish_encode(unsigned char * topic, unsigned char * payload, unsigned char * buff){
+int mqtt_publish_encode(unsigned char * topic, int qos, unsigned char * payload, char * buff){
     struct publish_packet packet;
     packet.publish_header.control_packet_1 = 3;
-    packet.publish_header.control_packet_2 = 0;
+    packet.publish_header.control_packet_2 = qos << 1;
     packet.variable_header.topic_name = string_encode(topic);
 
     packet.payload = payload;

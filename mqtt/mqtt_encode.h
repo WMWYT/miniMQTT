@@ -7,7 +7,7 @@ char * mqtt_conncet_encode(unsigned char c_flag, int keep_alive \
 
 char * mqtt_connack_encode(int acknowledge_flag, int return_code);
 
-int mqtt_publish_encode(unsigned char * topic, unsigned char * payload, unsigned char * buff);
+int mqtt_publish_encode(unsigned char * topic, int qos, unsigned char * payload, char * buff);
 
 char * mqtt_publish_qos_encode(int control_type, int flag, int identifier_MSB, int identifier_LSB);
 

@@ -103,6 +103,7 @@ void session_delete(struct session * s){
     if(s->clean_session){
         char **p = NULL;
 
+        //当删除会话的时候从session中找出topic并逐个删掉
         if(utarray_front(s->topic)){
             while(p = (char **)utarray_next(s->topic, p)){
                 session_topic_unsubscribe(*p, s->client_id);
@@ -124,6 +125,7 @@ void session_add_will_topic(char * s_will_topic, int qos, struct session *s){
     }
 
     s->will_qos = qos;
+    printf("session_add_will_topic:%d\n", s->will_qos);
     memmove(s->will_topic, s_will_topic, strlen(s_will_topic));
 }
 
@@ -194,15 +196,20 @@ void publish_will_message(struct session * s){
     struct session * will_s;
     UT_array * will_client_id;
     int buff_size = 0;
+    int qos = s->will_qos;
     char buff[65535] = {0};
-    char ** p = NULL;
+    ChilderNode * p = NULL;
 
     will_client_id = session_topic_search(s->will_topic);
     if(will_client_id != NULL){
         if(utarray_front(will_client_id) != NULL){
-            while((p = (char **) utarray_next(will_client_id, p))){
-                HASH_FIND(hh2, session_client_id, *p, strlen(*p), will_s);
-                buff_size = mqtt_publish_encode(s->will_topic, s->will_playload, buff);
+            while((p = (ChilderNode *) utarray_next(will_client_id, p))){
+                HASH_FIND(hh2, session_client_id, p->client_id, strlen(p->client_id), will_s);
+                
+                if(s->will_qos > p->max_qos)
+                    qos = p->max_qos;
+
+                buff_size = mqtt_publish_encode(s->will_topic, qos,s->will_playload, buff);
                 write(will_s->sock, buff, buff_size);
                 memset(buff, 0, buff_size);
             }
@@ -219,8 +226,8 @@ void session_close(struct session *s){
 }
 
 /*******************************topic************************************/
-void session_topic_subscribe(char * s_topic, char * s_client_id){
-    intercept(s_topic, s_client_id);
+void session_topic_subscribe(char * s_topic, int max_qos, char * s_client_id){
+    intercept(s_topic, max_qos, s_client_id);
 }
 
 void session_topic_unsubscribe(char * topic, char * client_id){
@@ -228,8 +235,8 @@ void session_topic_unsubscribe(char * topic, char * client_id){
 }
 
 void session_topic_delete_all(){
-    if(root.client_id != NULL){
-        utarray_clear(root.client_id);
+    if(root.childer_node != NULL){
+        utarray_clear(root.childer_node);
     }
 
     if(root.plus_children != NULL){
@@ -257,7 +264,7 @@ UT_array * session_topic_search(char * topic){
 }
 
 void session_topic_printf_all(){
-    char **p = NULL;
+    ChilderNode *p = NULL;
     printf("-------------------system-------------\n");
     printf("+\n");
 
@@ -275,9 +282,10 @@ void session_topic_printf_all(){
 
     printf("-------------------root-------------\n");
     printf("#\n");
-    if(root.client_id != NULL){
-        while ( (p=(char**)utarray_next(root.client_id,p))) {
-            printf("%s ",*p);
+    if(root.childer_node != NULL){
+        while ( (p=(ChilderNode *)utarray_next(root.childer_node,p))) {
+            printf("client_id:%s ", p->client_id);
+            printf("max_qos:%d ", p->max_qos);
         }
     }
 
