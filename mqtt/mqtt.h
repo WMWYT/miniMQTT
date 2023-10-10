@@ -73,7 +73,7 @@ struct connect_packet{
     struct {
         mqtt_string * client_id;
         mqtt_string * will_topic;
-        mqtt_string * will_playload;
+        mqtt_string * will_payload;
         mqtt_string * user_name;
         mqtt_string * password;
     }payload;
@@ -134,7 +134,7 @@ struct publish_packet{
         unsigned char identifier_LSB;
     }variable_header;
 
-    int playload_len;
+    int payload_len;
     unsigned char * payload;
 };
 

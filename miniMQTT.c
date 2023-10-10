@@ -3,6 +3,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include "net/net.h"
+#include "net/session.h"
 #include "config/config.h"
 
 void printf_help(){
@@ -27,6 +28,8 @@ int main(int argc, char * const argv[])
     printf_logo();
 
     config_init();
+
+    // session_init();
 
     while( (opt = getopt(argc, argv, "p:")) != -1 )
     {

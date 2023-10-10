@@ -40,25 +40,18 @@ int event_handle(int * packet_len, char * buff, int fd){
         }
 
         if(error_code == CONNECT_ACCEPTED){
-            session_flag = session_init(fd, mqtt_packet->connect->payload.client_id->string, (mqtt_packet->connect->variable_header.connect_flags >> 1));
+            session_flag = session_add(fd, mqtt_packet->connect->payload.client_id->string, (mqtt_packet->connect->variable_header.connect_flags >> 1));
             
-            //printf("connect_flag:%d\n", (mqtt_packet->connect->variable_header.connect_flags >> 4 & 1) * 2 + (mqtt_packet->connect->variable_header.connect_flags >> 3 & 1));
-
             if(mqtt_packet->connect->variable_header.connect_flags >> 2 & 1){
                 session_add_will_topic(mqtt_packet->connect->payload.will_topic->string, \
                 ((mqtt_packet->connect->variable_header.connect_flags >> 4 & 1) * 2 + (mqtt_packet->connect->variable_header.connect_flags >> 3 & 1)), \
                 session_flag);
-                session_add_will_playload(mqtt_packet->connect->payload.will_playload->string, session_flag);
+                session_add_will_payload(mqtt_packet->connect->payload.will_payload->string, session_flag);
             }
 
             send(fd, mqtt_connack_encode(!(mqtt_packet->connect->variable_header.connect_flags >> 1), \
                                             CONNECT_ACCEPTED), \
                     4, 0);
-
-            //TODO 如果这个的clean session为0就推送之前的消息
-            if(!session_flag->clean_session){
-                
-            }
 
             if(session_flag->sock != fd){
                 int tmp = session_flag->sock;
@@ -69,6 +62,11 @@ int event_handle(int * packet_len, char * buff, int fd){
             return 0;
         }else{
             send(fd, mqtt_connack_encode(0, error_code), 4, 0);
+        }
+
+        //TODO 如果这个的clean session为0就推送之前的消息
+        if(!session_flag->clean_session){
+            
         }
 
         return -1;
@@ -82,34 +80,41 @@ int event_handle(int * packet_len, char * buff, int fd){
         printf("packet publish\n");
         UT_array * publish_client_id;
         ChilderNode * p = NULL;
+        int qos = mqtt_packet->publish->qos;
         int buff_size = 0;
         char publish_buff[65535] = {0};
 
         publish_client_id = session_topic_search(mqtt_packet->publish->variable_header.topic_name->string);
 
-        printf("dup: %d qos: %d, retain: %d\n", mqtt_packet->publish->dup, mqtt_packet->publish->qos, mqtt_packet->publish->retain);
-
         if(publish_client_id != NULL){
             while((p = (ChilderNode *) utarray_next(publish_client_id, p))){
+                printf("publish_client_id:%s\n", p->client_id);
                 HASH_FIND(hh2, session_client_id, p->client_id, strlen(p->client_id), s);
-
-                //TODO 存储合理的QOS1,2消息
-                // if(){
-                //     session_publish_add(*p, mqtt_packet->publish->variable_header.topic_name->string_len, \
-                //                         mqtt_packet->publish->variable_header.topic_name->string, \
-                //                         mqtt_packet->publish->playload_len, mqtt_packet->publish->payload);
-                //     session_publish_printf_all();
-                // }
                 
-                buff_size = mqtt_publish_encode(mqtt_packet->publish->variable_header.topic_name->string, \
-                                                p->max_qos, mqtt_packet->publish->payload, publish_buff);
+                if(qos > p->max_qos){
+                    qos = p->max_qos;
+                }
 
-                write(s->sock, publish_buff, buff_size);
+                if(qos == 0){
+                    buff_size = mqtt_publish_encode_qos_0(mqtt_packet->publish->variable_header.topic_name->string, \
+                                                        mqtt_packet->publish->payload, publish_buff);
+                }else{
+                    unsigned char id_M, id_L;
+                    int packet_id = session_publish_add(strlen(p->client_id), p->client_id, \
+                                        qos, \
+                                        mqtt_packet->publish->variable_header.topic_name->string_len, mqtt_packet->publish->variable_header.topic_name->string, \
+                                        mqtt_packet->publish->payload_len, mqtt_packet->publish->payload);
+                    ML_encode(packet_id, &id_M, &id_L);
+
+                    buff_size = mqtt_publish_encode_qos_1_2(mqtt_packet->publish->variable_header.topic_name->string, qos, id_M, id_L, mqtt_packet->publish->payload, publish_buff);
+                }
+
+                //printf_buff("publish", publish_buff, buff_size);
+                session_publish_printf();
+                if(s->sock > 0)
+                    write(s->sock, publish_buff, buff_size);
             }
         }
-
-        //TODO 这里在服务器给客户端推送消息的时候没有考虑客户端订阅时所允许的最大qos
-        //TODO 没有实现qos1，2的全功能
 
         if(mqtt_packet->publish->qos == 1){
             write(fd, mqtt_publish_qos_encode(PUBACK, 0, mqtt_packet->publish->variable_header.identifier_MSB, mqtt_packet->publish->variable_header.identifier_LSB), 4);
@@ -123,20 +128,28 @@ int event_handle(int * packet_len, char * buff, int fd){
     //QOS1
     if(mqtt_packet->const_packet->const_header.control_packet_1 == PUBACK){
         printf("puback packet\n");
-        //TODO 丢弃消息
+        unsigned char buff[2] = {0};
+        buff[0] = mqtt_packet->const_packet->variable_header.byte1;
+        buff[1] = mqtt_packet->const_packet->variable_header.byte2;
+        session_publish_delete(string_len(buff));
     }
 
     //QOS2
-    if(mqtt_packet->const_packet->const_header.control_packet_1 == PUBREC){
-        printf("pubrec packet\n");
-        //TODO 丢弃消息
-        write(fd, mqtt_publish_qos_encode(PUBREL, 2, mqtt_packet->const_packet->variable_header.byte1, mqtt_packet->const_packet->variable_header.byte2), 4);
-    }
-
     if(mqtt_packet->const_packet->const_header.control_packet_1 == PUBREL){
         printf("pubrel packet\n");
-        //TODO 丢弃报文标识符
+        session_publish_printf();
         write(fd, mqtt_publish_qos_encode(PUBCOMP, 0, mqtt_packet->const_packet->variable_header.byte1, mqtt_packet->const_packet->variable_header.byte2), 4);
+    }
+
+    if(mqtt_packet->const_packet->const_header.control_packet_1 == PUBREC){
+        printf("pubrec packet\n");
+        
+        unsigned char buff[2] = {0};
+        buff[0] = mqtt_packet->const_packet->variable_header.byte1;
+        buff[1] = mqtt_packet->const_packet->variable_header.byte2;
+        session_publish_delete(string_len(buff));
+
+        write(fd, mqtt_publish_qos_encode(PUBREL, 2, mqtt_packet->const_packet->variable_header.byte1, mqtt_packet->const_packet->variable_header.byte2), 4);
     }
 
     if(mqtt_packet->const_packet->const_header.control_packet_1 == PUBCOMP){

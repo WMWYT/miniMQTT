@@ -49,7 +49,7 @@ char * get_rand_str(int num){
 }
 
 /**************session***************/
-struct session * session_init(int s_sock, char * s_client_id, int clean_session){
+struct session * session_add(int s_sock, char * s_client_id, int clean_session){
     struct session * s = NULL;
     char * client_id;
     int tmp = 0;
@@ -60,7 +60,7 @@ struct session * session_init(int s_sock, char * s_client_id, int clean_session)
             tmp = s->sock;
             utarray_free(s->topic);
             if(s->will_topic) free(s->will_topic);
-            if(s->will_topic) free(s->will_playload);
+            if(s->will_topic) free(s->will_payload);
             HASH_DELETE(hh1, session_sock, s);
             HASH_DELETE(hh2, session_client_id, s);
 
@@ -115,6 +115,8 @@ void session_delete(struct session * s){
 
         if(s)
             free(s);
+    }else{
+        s->sock = 0;
     }
 }
 
@@ -129,13 +131,13 @@ void session_add_will_topic(char * s_will_topic, int qos, struct session *s){
     memmove(s->will_topic, s_will_topic, strlen(s_will_topic));
 }
 
-void session_add_will_playload(char * s_will_playload, struct session * s){
-    if(s->will_playload == NULL){
-        s->will_playload = (char *)malloc(sizeof(char) * (strlen(s_will_playload) + 1));
-        memset(s->will_playload, 0, sizeof(char) * (strlen(s_will_playload) + 1));
+void session_add_will_payload(char * s_will_payload, struct session * s){
+    if(s->will_payload == NULL){
+        s->will_payload = (char *)malloc(sizeof(char) * (strlen(s_will_payload) + 1));
+        memset(s->will_payload, 0, sizeof(char) * (strlen(s_will_payload) + 1));
     }
 
-    memmove(s->will_playload, s_will_playload, strlen(s_will_playload));
+    memmove(s->will_payload, s_will_payload, strlen(s_will_payload));
 }
 
 void session_subscribe_topic(char * s_topic, struct session *s){
@@ -171,7 +173,7 @@ void session_printf_all(){
            printf("%s ", *p);
         printf("\n");
 
-        printf("will topic -- %s playload -- %s\n", current->will_topic, current->will_playload);
+        printf("will topic -- %s payload -- %s\n", current->will_topic, current->will_payload);
     }
 }
 
@@ -209,7 +211,19 @@ void publish_will_message(struct session * s){
                 if(s->will_qos > p->max_qos)
                     qos = p->max_qos;
 
-                buff_size = mqtt_publish_encode(s->will_topic, qos,s->will_playload, buff);
+                if(qos == 0)
+                    buff_size = mqtt_publish_encode_qos_0(s->will_topic, s->will_payload, buff);
+                else{
+                    unsigned char id_M, id_L;
+                    int packet_id = session_publish_add(strlen(p->client_id), p->client_id, \
+                                        qos, \
+                                        strlen(s->will_topic), s->will_topic, \
+                                        strlen(s->will_payload), s->will_payload);
+                    ML_encode(packet_id, &id_M, &id_L);
+
+                    buff_size = mqtt_publish_encode_qos_1_2(s->will_topic, qos, id_M, id_L, s->will_payload, buff);
+                }
+
                 write(will_s->sock, buff, buff_size);
                 memset(buff, 0, buff_size);
             }
@@ -306,48 +320,86 @@ void session_topic_printf_all(){
 }
 
 /*****************sessiong publish*****************/
-void session_publish_add(char * client_id, int topic_len, char * topic, int playload_len, char * playload){
-    struct session_publish * s;
-
-    s = (struct session_publish *) malloc(sizeof * s);
-    memset(s, 0, sizeof * s);
-    strcpy(s->client_id, client_id);
-
-    s->topic = (char *) malloc(sizeof(char) * topic_len);
-    memset(s->topic, 0, topic_len);
-    strcpy(s->topic, topic);
-
-    s->playload = (char *) malloc(sizeof(char) * playload_len);
-    memset(s->playload, 0, playload_len);
-    strcpy(s->playload, playload);
-
-    HASH_ADD_STR(session_publish, client_id, s);
+void payload_copy(void *_dst, const void *_src) {
+  publish_payload *dst = (publish_payload*)_dst, *src = (publish_payload*)_src;
+  dst->qos = src->qos;
+  dst->payload = src->payload ? strdup(src->payload) : NULL;
 }
 
-void session_publish_delete(char * client_id){
-    struct session_publish * s;
-
-    HASH_FIND_STR(session_publish, client_id, s);
-
-    HASH_DEL(session_publish, s);
-    free(s);
+void payload_dtor(void *_elt) {
+  publish_payload *elt = (publish_payload*)_elt;
+  if (elt->payload) free(elt->payload);
 }
 
-void session_publish_delete_all(){
-    struct session_publish *current;
-    struct session_publish *tmp;
+UT_icd payload_icd = {sizeof(publish_payload), NULL, payload_copy, payload_dtor};
 
-    HASH_ITER(hh, session_publish, current, tmp) {
-      HASH_DEL(session_publish, current);
+int session_publish_add(int client_id_len, char * client_id, \
+                        int qos, \
+                        int topic_len, char * topic, \
+                        int payload_len, char * payload){
+    int i = 0;
+    while(i < 65535){
+        ++i;
+        if(session_packet_identifier[i].id == 0){
+            session_packet_identifier[i].id = i;
+
+            publish_payload * ic = (publish_payload *) malloc(sizeof(publish_payload));
+            memset(ic, 0, sizeof(publish_payload));
+
+            utarray_new(session_packet_identifier[i].payload, &payload_icd);
+
+            ic->qos = qos;
+            ic->payload = (char *) malloc(sizeof(char) * (payload_len + 1));
+            memset(ic->payload, 0, sizeof(char) * (payload_len + 1));
+            strcpy(ic->payload, payload);
+
+            utarray_push_back(session_packet_identifier[i].payload, ic);
+
+            session_packet_identifier[i].client_id = (char *) malloc(sizeof(char) + (client_id_len + 1));
+            strcpy(session_packet_identifier[i].client_id, client_id);
+
+            session_packet_identifier[i].topic = (char *) malloc(sizeof(char) + (topic_len + 1));
+            strcpy(session_packet_identifier[i].topic, topic);
+
+            break;
+        }
     }
+
+    return i;
 }
 
-void session_publish_printf_all(){
-    struct session_publish *current;
-    struct session_publish *tmp;
-    char **p = NULL;
+void session_publish_delete(int packet_id){
+    session_packet_identifier[packet_id].id = 0;
 
-    HASH_ITER(hh, session_publish, current, tmp){
-        printf("publish client id %s: topic %s playload %s\n", current->client_id, current->topic, current->playload);
+    char * tmp_client_id = session_packet_identifier[packet_id].client_id;
+    session_packet_identifier[packet_id].client_id = NULL;
+    free(tmp_client_id);
+
+    char * tmp_topic = session_packet_identifier[packet_id].topic;
+    session_packet_identifier[packet_id].topic = NULL;
+    free(tmp_topic);
+
+    utarray_free(session_packet_identifier[packet_id].payload);
+}
+
+void session_publish_printf(){
+    int i = 0;
+    printf("-------------------------------------\n");
+    printf("session publish\n");
+    publish_payload *p;
+    
+    while(i < 65535){
+        ++i;
+        if(session_packet_identifier[i].id != 0){
+            printf("id:%d\n", i);
+            printf("client_id:%s\n", session_packet_identifier[i].client_id);
+            printf("topic:%s\n", session_packet_identifier[i].topic);
+            p = NULL;
+            while((p = (publish_payload *) utarray_next(session_packet_identifier[i].payload, p))){
+                printf("payload:%s\n", p->payload);
+                printf("qos:%d\n", p->qos);
+            }
+        }
     }
+    printf("-------------------------------------\n");
 }

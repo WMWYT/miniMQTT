@@ -97,11 +97,11 @@ char * conncet_packet_to_hex(struct connect_packet packet){
         memcpy(buff, packet.payload.will_topic->string, packet.payload.will_topic->string_len);
         buff += packet.payload.will_topic->string_len;
 
-        *buff++ = packet.payload.will_playload->length_MSB;
-        *buff++ = packet.payload.will_playload->length_LSB;
+        *buff++ = packet.payload.will_payload->length_MSB;
+        *buff++ = packet.payload.will_payload->length_LSB;
 
-        memcpy(buff, packet.payload.will_playload->string, packet.payload.will_playload->string_len);
-        buff += packet.payload.will_playload->string_len;
+        memcpy(buff, packet.payload.will_payload->string, packet.payload.will_payload->string_len);
+        buff += packet.payload.will_payload->string_len;
     }
 
     if(packet.variable_header.connect_flags >> 6 & 1){
@@ -157,9 +157,9 @@ char * mqtt_conncet_encode(unsigned char c_flag, int keep_alive
 
     if(c_flag >> 2 & 1){
         packet.payload.will_topic = string_encode(will_topic);
-        packet.payload.will_playload = string_encode(will_message);
+        packet.payload.will_payload = string_encode(will_message);
         packet.connect_header.remaining_length += packet.payload.will_topic->string_len + \
-                                                  packet.payload.will_playload->string_len +4;
+                                                  packet.payload.will_payload->string_len +4;
     }
 
     if(c_flag >> 6 & 1){
@@ -188,36 +188,64 @@ char * mqtt_connack_encode(int acknowledge_flag, int return_code){
 }
 
 char * publish_packet_to_hex(struct publish_packet packet){
-    //TODO 这个只是qos0的，将他修改为qos1，qos2等可以的
     char * buff = (char *) malloc(sizeof(char) * (3 + packet.publish_header.remaining_length));
     char * flag = buff;
     memset(buff, 0, 2 + packet.publish_header.remaining_length);
-    
+
     *buff++ = packet.publish_header.control_packet_1 * 0x10 + packet.publish_header.control_packet_2;
     *buff++ = packet.publish_header.remaining_length;
     *buff++ = packet.variable_header.topic_name->length_MSB;
     *buff++ = packet.variable_header.topic_name->length_LSB;
-    
+
     memcpy(buff, packet.variable_header.topic_name->string, packet.variable_header.topic_name->string_len);
 
     buff += packet.variable_header.topic_name->string_len;
 
-    //TODO 因为是qos0所以不设置报文标识
+    printf("publish_packet_to_hex: %d\n", packet.qos);
+
+    if(packet.qos > 0){
+        *buff++ = packet.variable_header.identifier_MSB;
+        *buff++ = packet.variable_header.identifier_LSB;
+    }
 
     memcpy(buff, packet.payload, strlen(packet.payload));
 
     return flag;
 }
 
-int mqtt_publish_encode(unsigned char * topic, int qos, unsigned char * payload, char * buff){
+//qos0 没有报文标志位
+int mqtt_publish_encode_qos_0(unsigned char * topic, unsigned char * payload, char * buff){
     struct publish_packet packet;
     packet.publish_header.control_packet_1 = 3;
-    packet.publish_header.control_packet_2 = qos << 1;
+    packet.publish_header.control_packet_2 = 0;
+    packet.qos = 0;
+
     packet.variable_header.topic_name = string_encode(topic);
 
     packet.payload = payload;
 
     packet.publish_header.remaining_length = packet.variable_header.topic_name->string_len + strlen(packet.payload) + 2;
+
+    memcpy(buff, publish_packet_to_hex(packet), packet.publish_header.remaining_length + 2);
+
+    return packet.publish_header.remaining_length + 2;
+}
+
+//qos1 2 有报文标志位
+int mqtt_publish_encode_qos_1_2(unsigned char * topic, int qos, unsigned char id_M, unsigned char id_L, unsigned char * payload, char * buff){
+    struct publish_packet packet;
+    packet.publish_header.control_packet_1 = PUBLISH;
+    packet.publish_header.control_packet_2 = qos << 1;
+    packet.qos = qos;
+
+    packet.variable_header.topic_name = string_encode(topic);
+
+    packet.variable_header.identifier_MSB = id_M;
+    packet.variable_header.identifier_LSB = id_L;
+
+    packet.payload = payload;
+
+    packet.publish_header.remaining_length = packet.variable_header.topic_name->string_len + strlen(packet.payload) + 4;
 
     memcpy(buff, publish_packet_to_hex(packet), packet.publish_header.remaining_length + 2);
 

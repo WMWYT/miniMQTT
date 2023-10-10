@@ -106,8 +106,8 @@ struct connect_packet *mqtt_connect_packet_create(struct fixed_header header, un
         packet->payload.will_topic = hex_to_string(buff);
         buff += packet->payload.will_topic->string_len + 2;
         
-        packet->payload.will_playload = hex_to_string(buff);
-        buff += packet->payload.will_playload->string_len + 2;
+        packet->payload.will_payload = hex_to_string(buff);
+        buff += packet->payload.will_payload->string_len + 2;
     }
 
     if((packet->variable_header.connect_flags >> 7) & 1){
@@ -194,7 +194,7 @@ struct publish_packet * mqtt_publish_packet_create(struct fixed_header header, u
     packet->payload = (unsigned char *) malloc(str_len);
     memset(packet->payload, 0, str_len);
     memcpy(packet->payload, buff, str_len);
-    packet->playload_len = str_len;
+    packet->payload_len = str_len;
 
     return packet;
 }

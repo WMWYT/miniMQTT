@@ -349,9 +349,9 @@ UT_array * search(char * key){
 
     while((p = (struct TrieNode *) utarray_next(pCrawl, p))){
         if(p->childer_node != NULL){
-            while((test = (ChilderNode *) utarray_next(p->childer_node, test))){
-                printf("tmp_array:%s\n", test->client_id);
-            }
+            // while((test = (ChilderNode *) utarray_next(p->childer_node, test))){
+            //     printf("tmp_array:%s\n", test->client_id);
+            // }
             utarray_concat(tmp_array, p->childer_node);
         }
     }

@@ -24,7 +24,7 @@ int system_call_back(void * system_date){
     struct system_info * info = (struct system_info *) system_date;
     int system_change = info->change;
     int buff_size = 0;
-    char playload[10] = {0};
+    char payload[10] = {0};
     char buff[255] = {0};
     ChilderNode * p = NULL;
 
@@ -35,10 +35,10 @@ int system_call_back(void * system_date){
         case 0:
             active_client_id = session_topic_search("$SYS/broker/active");
             if(utarray_front(active_client_id) != NULL){
-                sprintf(playload, "%d", info->active);
+                sprintf(payload, "%d", info->active);
                 while((p = (ChilderNode *) utarray_next(active_client_id, p))){
                     printf("system_call_back:%s\n", p->client_id);
-                    buff_size = mqtt_publish_encode("$SYS/broker/active", p->max_qos, playload, buff);
+                    buff_size = mqtt_publish_encode_qos_0("$SYS/broker/active", payload, buff);
                     HASH_FIND(hh2, session_client_id, p->client_id, strlen(p->client_id), s);
                     memset(buff, 0, buff_size);
                     write(s->sock, buff, buff_size);
