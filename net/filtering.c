@@ -232,11 +232,12 @@ void intercept(char * key, int max_qos, char * client_id){
 
 pound:
     if(pCrawl->PoundNode.childer_node == NULL)
-        utarray_new(pCrawl->PoundNode.childer_node, &ut_str_icd);
+        utarray_new(pCrawl->PoundNode.childer_node, &childer_node_icd);
 
-    utarray_push_back(pCrawl->PoundNode.childer_node, &client_id);
+    utarray_push_back(pCrawl->PoundNode.childer_node, ic);
     deduplication(pCrawl->PoundNode.childer_node);
 
+    return;
 end:
     if(pCrawl->childer_node == NULL)
         utarray_new(pCrawl->childer_node, &childer_node_icd);
@@ -281,7 +282,7 @@ UT_array * search(char * key){
 
     struct TrieNode *tmpCrawl = NULL;
     struct TrieNode * p = NULL;
-    
+
     ChilderNode * test = NULL;
     char * tmp_str = NULL;
     int tmp_int = 0;
@@ -322,9 +323,8 @@ UT_array * search(char * key){
     if(tmpCrawl != NULL)
         utarray_push_back(pCrawl, tmpCrawl);
 
-    if(root.plus_children != NULL){
+    if(root.plus_children != NULL)
         utarray_push_back(pCrawl, root.plus_children);
-    }
 
     if(utarray_front(pCrawl) != NULL){
         for(; key[i] != '\0'; i++){
@@ -349,10 +349,9 @@ UT_array * search(char * key){
 
     while((p = (struct TrieNode *) utarray_next(pCrawl, p))){
         if(p->childer_node != NULL){
-            // while((test = (ChilderNode *) utarray_next(p->childer_node, test))){
-            //     printf("tmp_array:%s\n", test->client_id);
-            // }
             utarray_concat(tmp_array, p->childer_node);
+        }else if(p->PoundNode.childer_node != NULL){
+            utarray_concat(tmp_array, p->PoundNode.childer_node);
         }
     }
 
@@ -407,7 +406,6 @@ void delete_node(struct TrieNode * node, char * key, char * client_id){
 
         if(!strcmp(tmp_str, "#")){
             delete_client_id(node->PoundNode.childer_node, client_id);
-            delete_client_id(node->childer_node, client_id);
             return;
         }else if(!strcmp(tmp_str, "+")){
             HASH_FIND_STR(node->plus_children, "+", out_node);
@@ -433,7 +431,6 @@ void delete_topic(char * key, char * client_id){
     struct TrieNode * node = NULL;
 
     char * tmp_str = NULL;
-    // char **first, **find;
     ChilderNode * first, * find;
     int key_len = strlen(key);
     int i = 0;
@@ -536,14 +533,12 @@ void printf_all(struct TrieNode * s_root){
                 printf("client_id:%s ", p1->client_id);
                 printf("max_qos:%d ", p1->max_qos);
             }
-
-            printf("\n");
         }else{
             printf("%s ", current_user->key);
         }
 
         if(current_user->PoundNode.childer_node != NULL){
-            printf("---------------pound------------\n");
+            printf("\n---------------pound------------\n");
             printf("%s ", current_user->key);
             while((p2=(ChilderNode *)utarray_next(current_user->PoundNode.childer_node, p2))){
                 printf("client_id:%s ", p2->client_id);

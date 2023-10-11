@@ -53,6 +53,37 @@ int event_handle(int * packet_len, char * buff, int fd){
                                             CONNECT_ACCEPTED), \
                     4, 0);
 
+            //TODO 如果这个的clean session为0就推送之前的消息
+            if(mqtt_packet->connect->variable_header.connect_flags >> 7 & 1){
+                int i = 0;
+                while(i < 65536){
+                    if(!strcmp(session_packet_identifier[i].client_id, \
+                                mqtt_packet->connect->payload.client_id->string)){
+                        if(mqtt_packet->connect->variable_header.connect_flags >> 1 & 1 == 0){
+                            //TODO publish
+                            unsigned char id_M = 0, id_L = 0;
+                            int buff_size = 0;
+                            char publish_buff[65535] = {0};
+
+                            publish_payload * p_qos = NULL;
+                            ML_encode(i, &id_M, &id_L);
+
+                            //TODO 这里一次只能一个一个发
+                            while(p_qos = (publish_payload *) utarray_next(session_packet_identifier[i].payload, p_qos)){
+                                buff_size = mqtt_publish_encode_qos_1_2(session_packet_identifier[i].topic, \
+                                                                        p_qos->qos, \
+                                                                        id_M, id_L, \
+                                                                        p_qos->payload, \
+                                                                        publish_buff);
+                                write(fd, publish_buff, buff_size);
+                            }
+                        }
+
+                        session_publish_delete(i);
+                    }
+                }
+            }
+
             if(session_flag->sock != fd){
                 int tmp = session_flag->sock;
                 session_flag->sock = fd;
@@ -62,11 +93,6 @@ int event_handle(int * packet_len, char * buff, int fd){
             return 0;
         }else{
             send(fd, mqtt_connack_encode(0, error_code), 4, 0);
-        }
-
-        //TODO 如果这个的clean session为0就推送之前的消息
-        if(!session_flag->clean_session){
-            
         }
 
         return -1;
