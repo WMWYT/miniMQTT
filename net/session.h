@@ -17,6 +17,8 @@ struct session {
     char * will_payload;
     UT_array * topic;
 
+    int connect_flag;
+
     UT_hash_handle hh1;
     UT_hash_handle hh2;
 };
@@ -27,14 +29,11 @@ typedef struct{
 }publish_payload;
 
 struct session_publish{
-    int id;
     char * client_id;
     char * topic;
     UT_array * payload;
 };
 
-//TODO 存储报文标识符
-static struct session_publish session_packet_identifier[65536];
 
 // void session_init();
 struct session * session_add(int s_sock, char * s_client_id, int clean_session);

@@ -17,6 +17,7 @@
 union mqtt_packet * mqtt_packet;
 extern struct session * session_sock;
 extern struct session * session_client_id;
+extern struct session_publish session_packet_identifier[65536];
 
 int event_handle(int * packet_len, char * buff, int fd){
     struct session * s;
@@ -24,6 +25,7 @@ int event_handle(int * packet_len, char * buff, int fd){
     struct session * session_flag;
     
     HASH_FIND(hh1, session_sock, &fd, sizeof(int), s);
+
     mqtt_packet = mqtt_pack_decode(buff, packet_len);
 
     if(mqtt_packet == NULL){
@@ -54,12 +56,16 @@ int event_handle(int * packet_len, char * buff, int fd){
                     4, 0);
 
             //TODO 如果这个的clean session为0就推送之前的消息
-            if(mqtt_packet->connect->variable_header.connect_flags >> 7 & 1){
-                int i = 0;
-                while(i < 65536){
-                    if(!strcmp(session_packet_identifier[i].client_id, \
-                                mqtt_packet->connect->payload.client_id->string)){
-                        if(mqtt_packet->connect->variable_header.connect_flags >> 1 & 1 == 0){
+            if(mqtt_packet->connect->payload.client_id != NULL && !(mqtt_packet->connect->variable_header.connect_flags >> 1 & 1)){
+                printf("clean session in\n");
+                for(int i = 1; i < 65536; i++){
+                    if(session_packet_identifier[i].client_id != NULL){
+                        printf("publish_id:%d\n", i);
+                        printf("publish_client_id:%s\n", session_packet_identifier[i].client_id);
+                        printf("packet_client_id:%s\n", mqtt_packet->connect->payload.client_id->string);
+
+                        if(!strcmp(session_packet_identifier[i].client_id, \
+                                    mqtt_packet->connect->payload.client_id->string)){
                             //TODO publish
                             unsigned char id_M = 0, id_L = 0;
                             int buff_size = 0;
@@ -78,8 +84,6 @@ int event_handle(int * packet_len, char * buff, int fd){
                                 write(fd, publish_buff, buff_size);
                             }
                         }
-
-                        session_publish_delete(i);
                     }
                 }
             }
@@ -135,9 +139,7 @@ int event_handle(int * packet_len, char * buff, int fd){
                     buff_size = mqtt_publish_encode_qos_1_2(mqtt_packet->publish->variable_header.topic_name->string, qos, id_M, id_L, mqtt_packet->publish->payload, publish_buff);
                 }
 
-                //printf_buff("publish", publish_buff, buff_size);
-                session_publish_printf();
-                if(s->sock > 0)
+                if(s != NULL)
                     write(s->sock, publish_buff, buff_size);
             }
         }

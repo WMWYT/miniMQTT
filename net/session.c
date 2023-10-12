@@ -13,7 +13,7 @@ extern struct SYSNode sys;
 struct session_info * session_info;
 struct session *session_sock;
 struct session *session_client_id;
-struct session_publish * session_publish;
+struct session_publish session_packet_identifier[65536];
 
 char * get_rand_str(int num){
     int randomData = 0;
@@ -70,6 +70,7 @@ struct session * session_add(int s_sock, char * s_client_id, int clean_session){
             strcpy(s->client_id, s_client_id);
             utarray_new(s->topic, &ut_str_icd);
             s->clean_session = clean_session;
+            s->connect_flag = 1;
 
             HASH_ADD(hh1, session_sock, sock, sizeof(int), s);
             HASH_ADD(hh2, session_client_id, client_id, strlen(s->client_id), s);
@@ -100,24 +101,22 @@ struct session * session_add(int s_sock, char * s_client_id, int clean_session){
 }
 
 void session_delete(struct session * s){
-    if(s->clean_session){
-        char **p = NULL;
+    char **p = NULL;
 
+    if(s->clean_session){
         //当删除会话的时候从session中找出topic并逐个删掉
         if(utarray_front(s->topic)){
             while(p = (char **)utarray_next(s->topic, p)){
                 session_topic_unsubscribe(*p, s->client_id);
             }
         }
-
-        HASH_DELETE(hh1, session_sock, s);
-        HASH_DELETE(hh2, session_client_id, s);
-
-        if(s)
-            free(s);
-    }else{
-        s->sock = 0;
     }
+
+    HASH_DELETE(hh1, session_sock, s);
+    HASH_DELETE(hh2, session_client_id, s);
+
+    if(s)
+        free(s);
 }
 
 void session_add_will_topic(char * s_will_topic, int qos, struct session *s){
@@ -327,8 +326,9 @@ void payload_copy(void *_dst, const void *_src) {
 }
 
 void payload_dtor(void *_elt) {
-  publish_payload *elt = (publish_payload*)_elt;
-  if (elt->payload) free(elt->payload);
+    publish_payload *elt = (publish_payload*)_elt;
+    if (elt->payload != NULL) free(elt->payload);
+    elt->qos = 0;
 }
 
 UT_icd payload_icd = {sizeof(publish_payload), NULL, payload_copy, payload_dtor};
@@ -340,9 +340,7 @@ int session_publish_add(int client_id_len, char * client_id, \
     int i = 0;
     while(i < 65535){
         ++i;
-        if(session_packet_identifier[i].id == 0){
-            session_packet_identifier[i].id = i;
-
+        if(session_packet_identifier[i].client_id == NULL){
             publish_payload * ic = (publish_payload *) malloc(sizeof(publish_payload));
             memset(ic, 0, sizeof(publish_payload));
 
@@ -369,8 +367,6 @@ int session_publish_add(int client_id_len, char * client_id, \
 }
 
 void session_publish_delete(int packet_id){
-    session_packet_identifier[packet_id].id = 0;
-
     char * tmp_client_id = session_packet_identifier[packet_id].client_id;
     session_packet_identifier[packet_id].client_id = NULL;
     free(tmp_client_id);
@@ -379,6 +375,7 @@ void session_publish_delete(int packet_id){
     session_packet_identifier[packet_id].topic = NULL;
     free(tmp_topic);
 
+    //TODO 在clean_session时有错
     utarray_free(session_packet_identifier[packet_id].payload);
 }
 
@@ -388,9 +385,8 @@ void session_publish_printf(){
     printf("session publish\n");
     publish_payload *p;
     
-    while(i < 65535){
-        ++i;
-        if(session_packet_identifier[i].id != 0){
+    for(i = 0; i < 65536; i++){
+        if(session_packet_identifier[i].client_id != NULL){
             printf("id:%d\n", i);
             printf("client_id:%s\n", session_packet_identifier[i].client_id);
             printf("topic:%s\n", session_packet_identifier[i].topic);

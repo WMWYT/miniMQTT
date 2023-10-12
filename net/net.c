@@ -136,8 +136,9 @@ void net_start(){
                         str_len -= packet_len;
                     }
 
-                    session_printf_all();
-                    session_topic_printf_all();
+                    session_publish_printf();
+                    // session_printf_all();
+                    // session_topic_printf_all();
                 }else{
                     struct session * s = NULL;
  
