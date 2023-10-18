@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project(miniMQTT)
 
+find_package(OpenSSL REQUIRED)
+
 add_subdirectory(mqtt)
 add_subdirectory(net)
 add_subdirectory(config)

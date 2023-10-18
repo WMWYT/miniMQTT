@@ -29,8 +29,6 @@ int main(int argc, char * const argv[])
 
     config_init();
 
-    // session_init();
-
     while( (opt = getopt(argc, argv, "p:")) != -1 )
     {
         switch(opt)

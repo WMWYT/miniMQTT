@@ -43,6 +43,7 @@ dir = ./control/libfileextend.so;
 
 ## TODO
 
+* OpenSSL
+* 完善control
 * 添加线程
-* 实现QOS、清理会话
 * 打包
