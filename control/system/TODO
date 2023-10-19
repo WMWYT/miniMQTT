@@ -1,6 +1,0 @@
-$SYS
-    broker
-        version
-        start_time
-    session
-        active

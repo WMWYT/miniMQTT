@@ -8,7 +8,6 @@ void * control_lib;
 struct system_info * system_info;
 int (*broker_control_strat)();
 static int (*connect_call_back)(void *);
-static int (*system_call_back)(void *);
 static int (*subscribe_call_back)(void *);
 
 int control_init(const char * dl_dir, char * type){
@@ -59,9 +58,6 @@ int control_init(const char * dl_dir, char * type){
 
 int control_register(int (*call_back)(void *), int type){//TODO 将其他包传入回调函数
     switch (type){
-        case SYSTEM:
-            system_call_back = call_back;
-            break;
         case CONNECT:
             connect_call_back = call_back;
             break;
@@ -73,38 +69,6 @@ int control_register(int (*call_back)(void *), int type){//TODO 将其他包传�
     }
 
     return 0;
-}
-
-void system_info_init(){
-    static struct system_info info;
-    info.version = "0.0.1";
-    info.time = "8.27";
-    info.active = 0;
-
-    system_info = &info;
-}
-
-int control_system(struct system_info * info){
-    return system_call_back(info);
-}
-
-void system_info_update(void * info, int change){
-    switch (change){
-        case 0:
-            system_info->active += *(int *)info;
-            system_info->change = change;
-
-            if(system_info->active < 0){
-                printf("error active num\n");
-                return;
-            }
-            break;
-        default:
-            printf("not have change [%d]\n", change);
-            return;
-    }
-
-    control_system(system_info);
 }
 
 void session_info_delete(){
@@ -131,7 +95,7 @@ int * control_subscribe(struct subscribe_packet * subscribe){
         else
             return_code[i] = 0;
     }
-    
+
 end:
     return return_code;
 }
@@ -140,5 +104,6 @@ int control_destroyed(){
     if(broker_control_strat) free(broker_control_strat);
     if(connect_call_back) free(connect_call_back);
     if(subscribe_call_back) free(subscribe_call_back);
+    
     return dlclose(control_lib);
 }

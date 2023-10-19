@@ -34,8 +34,6 @@ struct session_publish{
     UT_array * payload;
 };
 
-
-// void session_init();
 struct session * session_add(int s_sock, char * s_client_id, int clean_session);
 void session_add_will_topic(char * s_will_topic, int qos, struct session *s);
 void session_add_will_payload(char * s_will_payload, struct session * s);

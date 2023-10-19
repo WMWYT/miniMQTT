@@ -94,9 +94,6 @@ struct session * session_add(int s_sock, char * s_client_id, int clean_session){
         HASH_ADD(hh2, session_client_id, client_id, strlen(s->client_id), s);
     }
 
-    int a = 1;
-    system_info_update(&a, 0);
-
     return s;
 }
 
@@ -231,11 +228,8 @@ void publish_will_message(struct session * s){
 }
 
 void session_close(struct session *s){
-    int a = -1;
-
     publish_will_message(s);
     session_delete(s);
-    system_info_update(&a, 0);
 }
 
 /*******************************topic************************************/

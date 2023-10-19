@@ -18,7 +18,6 @@ void printf_logo(){
     printf("██  ██  ██ ██ ██  ██ ██ ██ ██  ██  ██ ██ ▄▄ ██    ██       ██   \n");
     printf("██      ██ ██ ██   ████ ██ ██      ██  ██████     ██       ██   \n");
     printf("                                          ▀▀\n");
-    fflush(stdout);
 }
 
 int main(int argc, char * const argv[])

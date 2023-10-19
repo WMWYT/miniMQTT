@@ -3,20 +3,6 @@
 
 #include "../mqtt/mqtt.h"
 
-enum other_type{
-    SYSTEM
-};
-
-struct system_info{
-    char * version;
-    char * time;
-    int active;
-
-    int change;
-};
-
-void system_info_init();
-void system_info_update(void * info, int change);
 void session_info_delete();
 
 int control_register(int (*call_back)(void *), int type);
