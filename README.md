@@ -41,9 +41,6 @@ dir = ./control/libfileextend.so;
 
 只要支持MQTT V3.1.1版本的客户端都可以链接此服务器。
 
-## TODO
+## 结束
 
-* OpenSSL
-* 完善control
-* 添加线程
-* 打包
+本仓库已停止开发，项目更名dauntless，并将项目目录结构优化迁移至新仓库https://github.com/WMWYT/dauntless.git
